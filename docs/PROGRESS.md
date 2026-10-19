@@ -33,6 +33,10 @@ Int8 files: runs/cnn_{b,e2,d}_int8.npz (Phase 4 format) and runs/student_S{0,1}_
 - KD did not help on the selection metric (−0.30 val+TTA), though it improved ECE, NLL and rotate/brightness. The teacher is only 95% right on the cache.
 - The student's int8 cost (−0.30 val+TTA) is 10× E2's (−0.03). Student shifted val by kind (int8): rotate 0.872, noise 0.242, brightness-mul 0.918, brightness-add 0.666.
 
+## Phase 7 pre-registration (recorded before any Phase 7 evaluation)
+- (a) S1 (KD) is the task's required distilled-student deliverable. It is tested ONCE (float + int8, flip TTA) for that purpose only. S0 remains the selected best small model whatever S1 scores.
+- (b) The hidden-set report covers E2, B, D (declared in 6b) plus S0 int8 and S1 int8, added now, before release. Float + int8 where applicable, flip TTA.
+
 ## Open issues / Phase 7
 - experiments/hidden_eval.py still reads runs/final_model.json (B). Extend it to E2, B and D (float + int8), as pre-registered, before the hidden set is released.
 - The student is not robust (noise 0.24). Untried: student trained on a shift-aug cache, or D as teacher. The ~300 MB caches in data/ can be deleted once no longer needed.
