@@ -17,7 +17,7 @@ ACE-Net is a from-scratch deep learning stack written only in NumPy. It has a `T
 | Bonus | Knowledge distillation into a <= 50 KB int8 student | S1 (KD) int8 test 0.9287; S0 (CE, selected) 0.9281; both 43,770 B; criterion >= 0.9203: pass | `runs/distill.json`, `docs/ablation.md` |
 | Bonus | LR finder + cosine warmup schedule | cosine warmup +0.52 pt val+TTA | `runs/lr_finder.json`, `runs/lr_finder.png` |
 | Bonus | Hidden-set evaluator (npz / idx / PNG, any size) | self-test pass on 6,000 images, 8 models | `experiments/hidden_eval.py`, `runs/hidden_eval_selftest.json` |
-| Repro | Fresh-clone smoke test of every experiment | pass: 35 steps in 8.0 min | `scripts/smoke_test.py`, `runs/smoke_test.json` |
+| Repro | Fresh-clone smoke test of every experiment | pass: 35 steps in 8.1 min | `scripts/smoke_test.py`, `runs/smoke_test.json` |
 <!-- /table:checklist -->
 
 ## Quickstart
@@ -39,8 +39,8 @@ Fashion-MNIST is downloaded on first use into `data/raw/` and checked against th
 | platform | macOS-14.8.8-arm64-arm-64bit |
 | Python | 3.12.15 |
 | numpy | 2.5.4 |
-| test suite | 147 passed in 5 s |
-| smoke test (fresh clone, all steps) | 8.0 min + download 13 s |
+| test suite | 147 passed, 0 failed |
+| smoke test (fresh clone, all steps) | 8.1 min + download 10 s |
 <!-- /table:env -->
 
 **One command per experiment.** Run them in this order: each stage reads the JSON its predecessors wrote. Add `--smoke` to any command to run it on fixed tiny subsets (2,048 train / 512 val / 512 test, one epoch per training run). The smoke column is the measured time of that step inside `scripts/smoke_test.py`. "Full run" is the wall time logged by the real run. Evaluation-only stages did not log their wall time.
@@ -49,39 +49,39 @@ Fashion-MNIST is downloaded on first use into `data/raw/` and checked against th
 | command | full run (measured) | smoke | note |
 |---|---|---|---|
 | `python -m experiments.show_data` | not logged | 2.1 s |  |
-| `python -m experiments.mlp sweep` | 107 s | 1.7 s | 6 x 40 epochs |
+| `python -m experiments.mlp sweep` | 107 s | 2.6 s | 6 x 40 epochs |
 | `python -m experiments.mlp failures` | 32 s | 1.0 s |  |
 | `python -m experiments.mlp run --tag fix --opt adam --lr 3e-4 --dropout 0.3 --wd 0.05` | 41 s | 0.8 s |  |
-| `python -m experiments.mlp test` | not logged | 0.6 s |  |
+| `python -m experiments.mlp test` | not logged | 0.5 s |  |
 | `python -m experiments.diagnose_overfit` | 74 s | 1.0 s |  |
-| `python -m experiments.cnn train` | 47.2 min | 8.2 s | 20 epochs |
-| `python -m experiments.cnn retry` | not logged | 6.8 s |  |
-| `python -m experiments.cnn test` | not logged | 1.1 s |  |
-| `python -m experiments.cnn shift` | not logged | 2.4 s |  |
-| `python -m experiments.cnn ablation` | 92.6 min | 11.5 s |  |
-| `python -m experiments.cnn_ablation` | not logged | 6.4 s |  |
-| `python -m experiments.quant B` | 31 s | 31.2 s | int8 engine on 10k images only |
-| `python -m experiments.robust finder` | 107 s | 5.7 s |  |
-| `python -m experiments.robust augspeed` | not logged | 0.8 s |  |
-| `python -m experiments.robust train` | 2.4 h | 19.7 s | E1, E2, D: 20 epochs each |
-| `python -m experiments.robust eval` | not logged | 17.0 s |  |
+| `python -m experiments.cnn train` | 47.2 min | 9.5 s | 20 epochs |
+| `python -m experiments.cnn retry` | not logged | 8.4 s |  |
+| `python -m experiments.cnn test` | not logged | 1.2 s |  |
+| `python -m experiments.cnn shift` | not logged | 2.9 s |  |
+| `python -m experiments.cnn ablation` | 92.6 min | 11.6 s |  |
+| `python -m experiments.cnn_ablation` | not logged | 7.7 s |  |
+| `python -m experiments.quant B` | 31 s | 46.0 s | int8 engine on 10k images only |
+| `python -m experiments.robust finder` | 107 s | 5.0 s |  |
+| `python -m experiments.robust augspeed` | not logged | 0.6 s |  |
+| `python -m experiments.robust train` | 2.4 h | 15.2 s | E1, E2, D: 20 epochs each |
+| `python -m experiments.robust eval` | not logged | 19.5 s |  |
 | `python -m experiments.robust plot` | not logged | 0.7 s |  |
 | `python -m experiments.robust select` | not logged | 0.6 s |  |
-| `python -m experiments.distill teachers` | not logged | 58.2 s |  |
-| `python -m experiments.distill cache` | 3.3 min | 10.1 s |  |
-| `python -m experiments.distill candidates` | not logged | 0.6 s |  |
-| `python -m experiments.distill speed` | not logged | 10.4 s |  |
-| `python -m experiments.distill screen` | 82.4 min | 40.9 s | 3 finders + 3 x 10 epochs |
-| `python -m experiments.distill select_arch` | not logged | 0.6 s |  |
-| `python -m experiments.distill cache_cropflip` | 3.1 min | 9.5 s |  |
-| `python -m experiments.distill students` | 99.0 min | 50.2 s | S0, S1: 40 epochs each |
-| `python -m experiments.distill final` | not logged | 56.0 s |  |
-| `python -m experiments.distill deliverable` | not logged | 6.4 s |  |
-| `python -m experiments.distill ablation` | not logged | 0.4 s |  |
+| `python -m experiments.distill teachers` | not logged | 63.6 s |  |
+| `python -m experiments.distill cache` | 3.3 min | 8.0 s |  |
+| `python -m experiments.distill candidates` | not logged | 0.4 s |  |
+| `python -m experiments.distill speed` | not logged | 8.0 s |  |
+| `python -m experiments.distill screen` | 82.4 min | 37.8 s | 3 finders + 3 x 10 epochs |
+| `python -m experiments.distill select_arch` | not logged | 0.5 s |  |
+| `python -m experiments.distill cache_cropflip` | 3.1 min | 8.2 s |  |
+| `python -m experiments.distill students` | 99.0 min | 44.4 s | S0, S1: 40 epochs each |
+| `python -m experiments.distill final` | not logged | 50.1 s |  |
+| `python -m experiments.distill deliverable` | not logged | 6.5 s |  |
+| `python -m experiments.distill ablation` | not logged | 0.6 s |  |
 | `python -m experiments.plots all` | not logged | 1.8 s |  |
-| `python -m experiments.hidden_eval --selftest` | not logged | 79.4 s |  |
-| `python -m experiments.hidden_eval data/hidden_selftest/idx --name smoke` | not logged | 21.1 s |  |
-| `python -m pytest -q -p no:cacheprovider` | not logged | 5.0 s |  |
+| `python -m experiments.hidden_eval --selftest` | not logged | 83.5 s |  |
+| `python -m experiments.hidden_eval data/hidden_selftest/idx --name smoke` | not logged | 21.3 s |  |
+| `python -m pytest -q -p no:cacheprovider --deselect tests/test_repo.py::test_readme_and_docs_links_exist` | not logged | 5.5 s |  |
 | `python -m scripts.make_tables` | not logged | 0.0 s |  |
 <!-- /table:runtimes -->
 

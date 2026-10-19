@@ -34,7 +34,7 @@
   "pytest": {
     "passed": 147
   },
-  "wall_s": 4.7,
+  "wall_s": 4.8,
   "python": "3.12.15",
   "numpy": "2.5.4"
 }
