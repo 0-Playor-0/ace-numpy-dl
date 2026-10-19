@@ -94,13 +94,16 @@ def plot_curves(rows, path, title):
 
 
 def fit(model, opt, train_loader, val_loader, epochs, lr_schedule=None, run_name="run",
-        config=None, seed=None, runs_dir=RUNS_DIR, verbose=True, label_smoothing=0.0):
+        config=None, seed=None, runs_dir=RUNS_DIR, verbose=True, label_smoothing=0.0,
+        scheduler=None):
     """Train with softmax cross-entropy; validate after every epoch.
 
     label_smoothing applies to the training loss only (the logged train_loss is the smoothed loss);
     validation always uses plain cross-entropy so runs stay comparable.
 
     lr_schedule: optional callable epoch (1-based) -> lr, applied at the start of each epoch.
+    scheduler: optional per-batch schedule (e.g. optim.CosineWarmup); step() runs before every
+    update. The logged lr is the last one used in the epoch.
     A non-finite training loss aborts the run with status "diverged".
     On return the model holds the best-val-accuracy weights (also saved to best.npz).
     """
@@ -124,6 +127,8 @@ def fit(model, opt, train_loader, val_loader, epochs, lr_schedule=None, run_name
         n_seen, loss_sum, correct, norms = 0, 0.0, 0, []
         with np.errstate(over="ignore", invalid="ignore"):
             for step, (xb, yb) in enumerate(train_loader, 1):
+                if scheduler is not None:
+                    scheduler.step()
                 logits = model(Tensor(xb))
                 loss = ops.softmax_cross_entropy(logits, yb, label_smoothing)
                 lv = float(loss.data)

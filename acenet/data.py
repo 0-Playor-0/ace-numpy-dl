@@ -168,9 +168,55 @@ def random_erase(x, rng, p=0.5, area=(0.02, 0.2), aspect=(0.3, 3.3), attempts=10
     return np.where(box[:, None], noise, x)
 
 
-def train_augment(x, rng, fill, erase=False):
-    """Train-time augmentation: random crop (pad 2) + horizontal flip, then optional random erasing."""
+SHIFT_AUG = {"p": 0.3, "rotate_max_deg": 15.0, "noise_sigma": (0.05, 0.3),
+             "brightness_mul_max": 0.3, "brightness_add_max": 0.2}
+
+
+def shift_augment(x, rng, mean, std, p=SHIFT_AUG["p"], rotate_max_deg=SHIFT_AUG["rotate_max_deg"],
+                  noise_sigma=SHIFT_AUG["noise_sigma"], mul_max=SHIFT_AUG["brightness_mul_max"],
+                  add_max=SHIFT_AUG["brightness_add_max"]):
+    """Distribution-shift augmentation for a standardized (N, 1, H, W) batch, vectorized.
+
+    Images are mapped back to [0, 1] pixels, then independently, each with probability p:
+      rotation   angle ~ U(-rotate_max_deg, rotate_max_deg), batched bilinear inverse mapping (fill 0)
+      noise      x + sigma * N(0, 1), sigma ~ U(noise_sigma)
+      brightness 50/50: x * (1 + U(-mul_max, mul_max)) or x + U(-add_max, add_max)
+    applied in that order, clipping to [0, 1] after each, then re-standardized. Untouched images are
+    returned bit-identical. Pass a generator dedicated to this augmentation.
+    """
+    from .shift import rotate
+
+    N = x.shape[0]
+    m = rng.random((3, N)) < p
+    touched = m.any(axis=0)
+    if not touched.any():
+        return x
+    idx = np.flatnonzero(touched)
+    m = m[:, idx]
+    n = len(idx)
+    mean32, std32 = np.float32(mean), np.float32(std)
+    z = np.clip(x[idx, 0] * std32 + mean32, 0.0, 1.0)  # (n, H, W) in [0, 1]
+    rot = m[0]
+    if rot.any():
+        z[rot] = np.clip(rotate(z[rot], rng.uniform(-rotate_max_deg, rotate_max_deg, int(rot.sum()))), 0.0, 1.0)
+    sig = np.where(m[1], rng.uniform(*noise_sigma, n), 0.0).astype(np.float32)[:, None, None]
+    z = np.clip(z + sig * rng.standard_normal(z.shape, dtype=np.float32), 0.0, 1.0)
+    add = rng.random(n) < 0.5
+    sev = np.where(add, rng.uniform(-add_max, add_max, n), rng.uniform(-mul_max, mul_max, n)).astype(np.float32)
+    sev = np.where(m[2], sev, np.float32(0.0))[:, None, None]
+    z = np.clip(np.where(add[:, None, None], z + sev, z * (1 + sev)), 0.0, 1.0)
+    out = x.copy()
+    out[idx, 0] = (z - mean32) / std32
+    return out
+
+
+def train_augment(x, rng, fill, erase=False, shift=None):
+    """Train-time augmentation: random crop (pad 2) + horizontal flip, optional shift augmentation,
+    then optional random erasing. shift = (rng, mean, std) enables shift_augment with its own
+    generator. Shift runs before erasing so the N(0, 1) erase fill is not clipped to [0, 1]."""
     x = augment_batch(x, rng, pad=2, flip_p=0.5, fill=fill)
+    if shift is not None:
+        x = shift_augment(x, *shift)
     return random_erase(x, rng) if erase else x
 
 

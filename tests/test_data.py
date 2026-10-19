@@ -154,3 +154,21 @@ def test_train_augment_flag_and_eval_loaders():
     y = np.zeros(64, dtype=np.int64)
     dl = DataLoader(x, y, 16, shuffle=False)
     assert np.array_equal(np.concatenate([xb for xb, _ in dl]), x)
+
+
+def test_shift_augment():
+    from acenet.data import shift_augment
+    mean, std = 0.286, 0.353
+    x01 = np.random.default_rng(0).random((64, 1, 28, 28)).astype(np.float32)
+    x01[:, :, :4] = 0.0
+    x = (x01 - mean) / std
+    out = shift_augment(x, np.random.default_rng(5), mean, std, p=0.3)
+    assert out.shape == x.shape and out.dtype == np.float32
+    changed = np.any(out != x, axis=(1, 2, 3))
+    assert 0 < changed.sum() < 64                      # P(untouched) = 0.7**3 = 0.34
+    back = out * std + mean
+    assert back.min() >= -1e-5 and back.max() <= 1 + 1e-5
+    again = shift_augment(x, np.random.default_rng(5), mean, std, p=0.3)
+    assert np.array_equal(out, again)                  # deterministic given the generator
+    assert np.array_equal(shift_augment(x, np.random.default_rng(5), mean, std, p=0.0), x)
+    assert np.all(np.any(shift_augment(x, np.random.default_rng(6), mean, std, p=1.0) != x, axis=(1, 2, 3)))

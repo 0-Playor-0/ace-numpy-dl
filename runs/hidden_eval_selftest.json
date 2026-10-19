@@ -1,0 +1,65 @@
+{
+  "source": "data/shifted_val.npz quantized to uint8",
+  "n": 6000,
+  "write_s": 2.2962382080149837,
+  "reference": {
+    "float_tta_acc": 0.7671666666666667,
+    "int8_tta_acc": 0.7671666666666667
+  },
+  "formats": {
+    "npz": {
+      "detected": "npz",
+      "float_tta_acc": 0.7671666666666667,
+      "int8_tta_acc": 0.7671666666666667,
+      "identical_to_reference_float": true,
+      "identical_to_reference_int8": true,
+      "log": [
+        "detected format: npz (/Users/ojaskulkarni/Desktop/Ojas College Projects/Extraaa/Projects For Clubs/ACE/data/hidden_selftest/npz)",
+        "npz shifted_val.npz: images 'X' (6000, 28, 28) uint8; labels 'y'",
+        "no inversion (mean border 0.079)"
+      ],
+      "s": 52.53468095802236
+    },
+    "idx": {
+      "detected": "idx",
+      "float_tta_acc": 0.7671666666666667,
+      "int8_tta_acc": 0.7671666666666667,
+      "identical_to_reference_float": true,
+      "identical_to_reference_int8": true,
+      "log": [
+        "detected format: idx (/Users/ojaskulkarni/Desktop/Ojas College Projects/Extraaa/Projects For Clubs/ACE/data/hidden_selftest/idx)",
+        "idx shifted-images-idx3-ubyte.gz: (6000, 28, 28) uint8; labels shifted-labels-idx1-ubyte.gz",
+        "no inversion (mean border 0.079)"
+      ],
+      "s": 53.98340562498197
+    },
+    "png": {
+      "detected": "png",
+      "float_tta_acc": 0.7671666666666667,
+      "int8_tta_acc": 0.7671666666666667,
+      "identical_to_reference_float": true,
+      "identical_to_reference_int8": true,
+      "log": [
+        "detected format: png (/Users/ojaskulkarni/Desktop/Ojas College Projects/Extraaa/Projects For Clubs/ACE/data/hidden_selftest/png)",
+        "png: 6000 files, shapes [(28, 28, 1)], label source ['folder']",
+        "no inversion (mean border 0.079)"
+      ],
+      "s": 53.043527749949135
+    },
+    "png_rgb56": {
+      "detected": "png",
+      "n": 500,
+      "float_tta_acc": 0.754,
+      "int8_tta_acc": 0.75,
+      "reference_first_500_float": 0.754,
+      "agree_with_reference_float": 1.0,
+      "log": [
+        "detected format: png (/Users/ojaskulkarni/Desktop/Ojas College Projects/Extraaa/Projects For Clubs/ACE/data/hidden_selftest/png_rgb56)",
+        "png: 500 files, shapes [(56, 56, 3)], label source ['filename']",
+        "RGB -> grayscale (BT.601 luma): 500 images",
+        "resized 56x56 -> 28x28 (area): 500 images",
+        "no inversion (mean border 0.082)"
+      ]
+    }
+  }
+}

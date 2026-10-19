@@ -6,11 +6,14 @@ TTA) -> pick calibrator by int8 val acc with TTA (the deployed config) -> per-la
 (fake-quant, one layer at a time) -> shifted val -> test ONCE (guarded) -> serialize to
 runs/cnn_b_int8.npz -> time 10k images. Writes runs/cnn_b_int8.json.
 
-Usage: python -m experiments.quant
+Phase 6a reuses the same pipeline for model D: main("D") -> runs/cnn_d_int8.{json,npz}.
+
+Usage: python -m experiments.quant [B|D]
 """
 
 import json
 import os
+import sys
 import time
 
 import numpy as np
@@ -19,7 +22,7 @@ from acenet.quant import CALIBRATORS, Int8Model, batched, build_qspec, calibrate
 from acenet.shift import load_shifted_val
 from acenet.tensor import Tensor, no_grad
 from experiments.cnn import EVAL_BATCH, RUNS_DIR, load_data
-from experiments.cnn_ablation import load_model, runs, shift_groups
+from experiments.cnn_ablation import entry as run_entry, load_model, shift_groups
 
 OUT = os.path.join(RUNS_DIR, "cnn_b_int8.json")
 NPZ = os.path.join(RUNS_DIR, "cnn_b_int8.npz")
@@ -37,15 +40,27 @@ def flip(X):
     return np.ascontiguousarray(X[..., ::-1])
 
 
-def main():
-    previous = json.load(open(OUT)) if os.path.exists(OUT) else {}
+def paths(model_id):
+    if model_id == "B":
+        return OUT, NPZ
+    stem = os.path.join(RUNS_DIR, f"cnn_{model_id.lower()}_int8")
+    return stem + ".json", stem + ".npz"
+
+
+def main(model_id="B", float_test=FLOAT_B_TEST, calibrators=CALIBRATORS):
+    """float_test: the model's float flip-TTA test accuracy (already evaluated once) for the drop.
+    calibrators: candidates; Phase 6a passes ("p99.99",) only (fixed from Phase 4)."""
+    out_path, npz_path = paths(model_id)
+    previous = json.load(open(out_path)) if os.path.exists(out_path) else {}
     data = load_data()
     Xv, yv = data["X_val"], data["y_val"]
-    entry = next(e for rid, _, _, e in runs() if rid == "B")
+    entry = run_entry(model_id)
     model = load_model(entry)
     model.eval()
-    abl = next(r for r in json.load(open(os.path.join(RUNS_DIR, "cnn_ablation.json")))["rows"] if r["id"] == "B")
-    res = {"phase": 4, "model": "B", "run_dir": entry["run_dir"], "calib_seed": CALIB_SEED, "n_calib": N_CALIB}
+    abl_file = "cnn_ablation.json" if model_id == "B" else "ablation.json"
+    abl = next(r for r in json.load(open(os.path.join(RUNS_DIR, abl_file)))["rows"] if r["id"] == model_id)
+    res = {"phase": 4 if model_id == "B" else "6a", "model": model_id, "run_dir": entry["run_dir"],
+           "calib_seed": CALIB_SEED, "n_calib": N_CALIB, "calibrators_tried": list(calibrators)}
 
     # 1. BN folding
     ops = fold_bn(model)
@@ -65,7 +80,7 @@ def main():
     rng = np.random.default_rng(CALIB_SEED)
     Xc = data["X_train"][rng.choice(len(data["X_train"]), N_CALIB, replace=False)]
     res["calibrators"], specs, engines, val_logits = {}, {}, {}, {}
-    for method in CALIBRATORS:
+    for method in calibrators:
         scales = calibrate(ops, Xc, method)
         qspec = build_qspec(ops, scales)
         qm = Int8Model.from_qspec(ops, qspec)
@@ -87,8 +102,8 @@ def main():
         print(method, {k: v for k, v in r.items() if k != "act_scales"})
 
     # selection on val: int8 acc with TTA, then without, ties -> minmax (CALIBRATORS order)
-    sel = max(CALIBRATORS, key=lambda m: (res["calibrators"][m]["val_acc_tta"], res["calibrators"][m]["val_acc"],
-                                          -CALIBRATORS.index(m)))
+    sel = max(calibrators, key=lambda m: (res["calibrators"][m]["val_acc_tta"], res["calibrators"][m]["val_acc"],
+                                          -calibrators.index(m)))
     res["selected_calibrator"] = sel
     qspec, qm = specs[sel], engines[sel]
 
@@ -118,15 +133,15 @@ def main():
     else:
         zt = qm.logits(data["X_test"], flip=True)
         ta = acc(zt, data["y_test"])
-        test = {"calibrator": sel, "tta": True, "test_acc": ta, "float_b_test_tta": FLOAT_B_TEST,
-                "drop": FLOAT_B_TEST - ta}
+        test = {"calibrator": sel, "tta": True, "test_acc": ta, "float_test_tta": float_test,
+                "drop": float_test - ta}
         print("TEST (once)", test)
     res["test"] = test
-    with open(OUT, "w") as f:  # persist the test result (and its guard) immediately
+    with open(out_path, "w") as f:  # persist the test result (and its guard) immediately
         json.dump(res, f, indent=2)
 
     # 7. serialization and size
-    qm.save(NPZ)
+    qm.save(npz_path)
     arrays = qm.arrays()
     layers = {}
     for i, name in enumerate(names):
@@ -134,11 +149,11 @@ def main():
         n_params = int(qspec[i]["w"].size + qspec[i]["b"].size)
         layers[name] = {**b, "total": sum(b.values()), "float32_params_bytes": 4 * n_params}
     payload = sum(v["total"] for v in layers.values()) + 4
-    file_bytes = os.path.getsize(NPZ)
+    file_bytes = os.path.getsize(npz_path)
     res["size"] = {"file_bytes": file_bytes, "file_kib": file_bytes / 1024, "payload_bytes": payload,
                    "npz_overhead_bytes": file_bytes - payload, "layers": layers,
                    "float32_kib": 1828.7, "ratio_vs_float32": 1828.7 * 1024 / file_bytes}
-    qm2 = Int8Model.load(NPZ)
+    qm2 = Int8Model.load(npz_path)
     assert np.array_equal(qm2.logits(Xv[:1000]), val_logits[sel][0][:1000]), "npz round trip mismatch"
 
     # timing: 10k TRAIN images (test is not touched for timing), no TTA, includes input quantization
@@ -153,9 +168,10 @@ def main():
     res["timing"] = {"n": N_TIME, "batch": 200, "int8_s": t, "int8_ms_per_image": 1000 * t / N_TIME,
                      "float32_folded_numpy_s": tf}
     print("size", res["size"], "timing", res["timing"])
-    with open(OUT, "w") as f:
+    with open(out_path, "w") as f:
         json.dump(res, f, indent=2)
+    return res
 
 
 if __name__ == "__main__":
-    main()
+    main(*(sys.argv[1:2] or ["B"]))

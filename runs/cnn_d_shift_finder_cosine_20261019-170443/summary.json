@@ -1,0 +1,11 @@
+{
+  "run_name": "cnn_d_shift_finder_cosine",
+  "run_dir": "runs/cnn_d_shift_finder_cosine_20261019-170443",
+  "status": "ok",
+  "diverged_at": null,
+  "epochs_run": 20,
+  "best_epoch": 20,
+  "best_val_acc": 0.936,
+  "best_val_loss": 0.1730954974889755,
+  "wall_time_s": 2527.520852625021
+}

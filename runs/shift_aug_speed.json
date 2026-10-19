@@ -1,0 +1,6 @@
+{
+  "crop_flip_erase": 0.8276669832412153,
+  "crop_flip_shift_erase": 2.678208489669487,
+  "added_ms_per_batch": 1.8505415064282715,
+  "batch": 128
+}

@@ -1,0 +1,11 @@
+{
+  "run_name": "cnn_e1_finder_const",
+  "run_dir": "runs/cnn_e1_finder_const_20261019-151959",
+  "status": "ok",
+  "diverged_at": null,
+  "epochs_run": 20,
+  "best_epoch": 20,
+  "best_val_acc": 0.9386666666666666,
+  "best_val_loss": 0.1655730019013087,
+  "wall_time_s": 2678.9080914160004
+}

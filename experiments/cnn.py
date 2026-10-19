@@ -18,8 +18,8 @@ import time
 import numpy as np
 
 from acenet import nn
-from acenet.data import DataLoader, augment_batch, load_splits, train_augment
-from acenet.optim import Adam
+from acenet.data import SHIFT_AUG, DataLoader, augment_batch, load_splits, train_augment
+from acenet.optim import Adam, CosineWarmup
 from acenet.shift import KINDS, load_shifted_val
 from acenet.tensor import Tensor
 from acenet import ops
@@ -27,6 +27,7 @@ from acenet.train import RUNS_DIR, evaluate, fit, load_checkpoint
 
 DATA_SEED = 0   # fixes the train/val split (same split as data/shifted_val.npz)
 RUN_SEED = 1    # init, dropout masks, batch order, augmentation
+SHIFT_AUG_SEED = 7  # own stream for shift augmentation (shifted_val was built from seed 0)
 BATCH = 128
 EVAL_BATCH = 200
 LR, WD = 1e-3, 5e-4
@@ -117,30 +118,41 @@ SCHEDULES = {
 }
 
 
-def run(tag, epochs, lr_schedule=None, schedule_desc=None, erase=False, label_smoothing=0.0):
+def run(tag, epochs, lr_schedule=None, schedule_desc=None, erase=False, label_smoothing=0.0,
+        lr=LR, warmup_epochs=None, shift_aug=False):
+    """warmup_epochs (not None) switches to a per-batch CosineWarmup schedule to 0 over all epochs.
+    shift_aug adds data.shift_augment with its own generator (SHIFT_AUG_SEED)."""
     data = load_data()
     rng = np.random.default_rng(RUN_SEED)
     model = build_model(rng)
-    opt = Adam(model.parameters(), lr=LR, weight_decay=WD, decoupled=True)
+    opt = Adam(model.parameters(), lr=lr, weight_decay=WD, decoupled=True)
     fill = black_fill(data)
+    shift = (np.random.default_rng(SHIFT_AUG_SEED), data["mean"], data["std"]) if shift_aug else None
     tr = DataLoader(data["X_train"], data["y_train"], BATCH, shuffle=True, rng=rng,
-                    transform=lambda x, r: train_augment(x, r, fill, erase=erase))
+                    transform=lambda x, r: train_augment(x, r, fill, erase=erase, shift=shift))
+    scheduler = None
+    if warmup_epochs is not None:
+        scheduler = CosineWarmup(opt, warmup_epochs, epochs, len(tr), min_lr=0.0)
+        schedule_desc = f"per-batch linear warmup {warmup_epochs} ep to {lr:g}, cosine to 0 at epoch {epochs}"
     va = DataLoader(data["X_val"], data["y_val"], EVAL_BATCH, shuffle=False)
     n_params, n_buffers = param_count(model)
-    config = {"model": "cnn-32-32-64-64-fc128", "optimizer": "AdamW", "lr": LR, "weight_decay": WD,
+    config = {"model": "cnn-32-32-64-64-fc128", "optimizer": "AdamW", "lr": lr, "weight_decay": WD,
               "adam_betas": [0.9, 0.999], "batch_size": BATCH, "dropout": 0.3,
               "augmentation": {"random_crop_pad": 2, "pad_fill_standardized": fill, "hflip_p": 0.5,
                                "random_erase": {"p": 0.5, "area": [0.02, 0.2], "aspect": [0.3, 3.3],
-                                                "fill": "N(0,1)"} if erase else None},
+                                                "fill": "N(0,1)"} if erase else None,
+                               "shift": dict(SHIFT_AUG, seed=SHIFT_AUG_SEED, order="rotate, noise, brightness",
+                                             brightness_modes="50/50 mul/add") if shift_aug else None},
               "lr_schedule": schedule_desc, "data_seed": DATA_SEED, "tag": tag,
               "params": n_params, "buffers": n_buffers}
     name = f"cnn_{tag}"
     res = fit(model, opt, tr, va, epochs, lr_schedule=lr_schedule, run_name=name, config=config,
-              seed=RUN_SEED, label_smoothing=label_smoothing)
+              seed=RUN_SEED, label_smoothing=label_smoothing, scheduler=scheduler)
     entry = {k: res[k] for k in ("run_name", "status", "epochs_run", "best_epoch",
                                  "best_val_acc", "best_val_loss", "wall_time_s")}
     entry.update(run_dir=os.path.relpath(res["run_dir"], ROOT), tag=tag, epochs=epochs,
-                 lr_schedule=schedule_desc, erase=erase, label_smoothing=label_smoothing)
+                 lr_schedule=schedule_desc, erase=erase, label_smoothing=label_smoothing,
+                 lr=lr, warmup_epochs=warmup_epochs, shift_aug=shift_aug)
     idx = _index()
     idx.append(entry)
     with open(INDEX, "w") as f:

@@ -1,0 +1,11 @@
+{
+  "run_name": "cnn_e2_finder_cosine",
+  "run_dir": "runs/cnn_e2_finder_cosine_20261019-160440",
+  "status": "ok",
+  "diverged_at": null,
+  "epochs_run": 20,
+  "best_epoch": 18,
+  "best_val_acc": 0.9448333333333333,
+  "best_val_loss": 0.15072151323159536,
+  "wall_time_s": 3568.9776684590033
+}

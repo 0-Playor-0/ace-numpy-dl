@@ -8,3 +8,4 @@ CLAUDE.md
 .claude/
 data/shifted_val.npz
 runs/**/*.npz
+data/hidden_selftest/

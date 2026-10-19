@@ -1,0 +1,51 @@
+{
+  "model": "cnn-32-32-64-64-fc128",
+  "optimizer": "AdamW",
+  "lr": 0.009112130953207169,
+  "weight_decay": 0.0005,
+  "adam_betas": [
+    0.9,
+    0.999
+  ],
+  "batch_size": 128,
+  "dropout": 0.3,
+  "augmentation": {
+    "random_crop_pad": 2,
+    "pad_fill_standardized": -0.8104800317992333,
+    "hflip_p": 0.5,
+    "random_erase": {
+      "p": 0.5,
+      "area": [
+        0.02,
+        0.2
+      ],
+      "aspect": [
+        0.3,
+        3.3
+      ],
+      "fill": "N(0,1)"
+    },
+    "shift": {
+      "p": 0.3,
+      "rotate_max_deg": 15.0,
+      "noise_sigma": [
+        0.05,
+        0.3
+      ],
+      "brightness_mul_max": 0.3,
+      "brightness_add_max": 0.2,
+      "seed": 7,
+      "order": "rotate, noise, brightness",
+      "brightness_modes": "50/50 mul/add"
+    }
+  },
+  "lr_schedule": "per-batch linear warmup 1 ep to 0.00911213, cosine to 0 at epoch 20",
+  "data_seed": 0,
+  "tag": "d_shift_finder_cosine",
+  "params": 468138,
+  "buffers": 640,
+  "run_name": "cnn_d_shift_finder_cosine",
+  "seed": 1,
+  "epochs": 20,
+  "label_smoothing": 0.0
+}

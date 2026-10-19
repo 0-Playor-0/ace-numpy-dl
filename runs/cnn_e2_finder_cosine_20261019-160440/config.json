@@ -1,0 +1,28 @@
+{
+  "model": "cnn-32-32-64-64-fc128",
+  "optimizer": "AdamW",
+  "lr": 0.009112130953207169,
+  "weight_decay": 0.0005,
+  "adam_betas": [
+    0.9,
+    0.999
+  ],
+  "batch_size": 128,
+  "dropout": 0.3,
+  "augmentation": {
+    "random_crop_pad": 2,
+    "pad_fill_standardized": -0.8104800317992333,
+    "hflip_p": 0.5,
+    "random_erase": null,
+    "shift": null
+  },
+  "lr_schedule": "per-batch linear warmup 1 ep to 0.00911213, cosine to 0 at epoch 20",
+  "data_seed": 0,
+  "tag": "e2_finder_cosine",
+  "params": 468138,
+  "buffers": 640,
+  "run_name": "cnn_e2_finder_cosine",
+  "seed": 1,
+  "epochs": 20,
+  "label_smoothing": 0.0
+}

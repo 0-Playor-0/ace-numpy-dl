@@ -86,11 +86,56 @@ def runs():
             ("C", "B + label smoothing 0.1", ["random_erase", "label_smoothing=0.1"], by_tag["erase_ls"])]
 
 
+TAGS = {"B": "erase", "C": "erase_ls", "E1": "e1_finder_const", "E2": "e2_finder_cosine",
+        "D": "d_shift_finder_cosine"}
+
+
+def entry(rid):
+    """Index entry for a run id (A = Phase 3 selected run; others by tag)."""
+    if rid == "A":
+        return baseline()
+    return next(e for e in _index() if e["tag"] == TAGS[rid])
+
+
 def load_model(entry):
     model = build_model(np.random.default_rng(RUN_SEED))
     epoch = load_checkpoint(model, os.path.join(ROOT, entry["run_dir"], "best.npz"))
     assert epoch == entry["best_epoch"]
     return model
+
+
+def eval_row(rid, desc, changes, e, Xv, yv, Xs, ys, groups):
+    """Phase 3b validation metrics for one run (clean val + shifted val, with/without flip TTA)."""
+    model = load_model(e)
+    p, p_tta = predict(model, Xv)
+    ps, ps_tta = predict(model, Xs)
+    pred, pred_tta = p.argmax(1), p_tta.argmax(1)
+    row = {
+        "id": rid, "description": desc, "changes_vs_A": changes,
+        "run_name": e["run_name"], "run_dir": e["run_dir"], "epochs": e["epochs"],
+        "lr": e.get("lr", 1e-3), "lr_schedule": e["lr_schedule"],
+        "label_smoothing": e.get("label_smoothing", 0.0),
+        "random_erase": bool(e.get("erase", False)), "shift_aug": bool(e.get("shift_aug", False)),
+        "best_epoch": e["best_epoch"], "wall_time_s": e["wall_time_s"],
+        "val_acc": float((pred == yv).mean()),
+        "val_acc_tta": float((pred_tta == yv).mean()),
+        "val_nll": float(-np.log(p[np.arange(len(yv)), yv]).mean()),
+        "val_nll_tta": float(-np.log(p_tta[np.arange(len(yv)), yv]).mean()),
+        "ece": ece(p, yv), "ece_tta": ece(p_tta, yv),
+        "per_class_val_acc": per_class_acc(pred, yv),
+        "per_class_val_acc_tta": per_class_acc(pred_tta, yv),
+        "confusion_val": confusion(pred, yv).tolist(),
+        "confusion_val_tta": confusion(pred_tta, yv).tolist(),
+        "shifted_val_acc": {g: float((ps.argmax(1)[m] == ys[m]).mean()) for g, m in groups.items()},
+        "shifted_val_acc_tta": {g: float((ps_tta.argmax(1)[m] == ys[m]).mean()) for g, m in groups.items()},
+        "shifted_val_acc_all": float((ps.argmax(1) == ys).mean()),
+        "shifted_val_acc_all_tta": float((ps_tta.argmax(1) == ys).mean()),
+        "shifted_val_n": {g: int(m.sum()) for g, m in groups.items()},
+    }
+    assert abs(row["val_acc"] - e["best_val_acc"]) < 1e-9, "checkpoint does not reproduce logged val acc"
+    print(f"{rid}: val {row['val_acc']:.4f} tta {row['val_acc_tta']:.4f} ece {row['ece']:.4f} "
+          f"shift {row['shifted_val_acc']}")
+    return row
 
 
 def main():
@@ -100,36 +145,7 @@ def main():
     groups = shift_groups(kind, mode)
     previous = json.load(open(OUT)) if os.path.exists(OUT) else {}
 
-    rows = []
-    for rid, desc, changes, e in runs():
-        model = load_model(e)
-        p, p_tta = predict(model, Xv)
-        ps, ps_tta = predict(model, Xs)
-        pred, pred_tta = p.argmax(1), p_tta.argmax(1)
-        row = {
-            "id": rid, "description": desc, "changes_vs_A": changes,
-            "run_name": e["run_name"], "run_dir": e["run_dir"], "epochs": e["epochs"],
-            "lr_schedule": e["lr_schedule"], "label_smoothing": e.get("label_smoothing", 0.0),
-            "random_erase": bool(e.get("erase", False)),
-            "best_epoch": e["best_epoch"], "wall_time_s": e["wall_time_s"],
-            "val_acc": float((pred == yv).mean()),
-            "val_acc_tta": float((pred_tta == yv).mean()),
-            "val_nll": float(-np.log(p[np.arange(len(yv)), yv]).mean()),
-            "val_nll_tta": float(-np.log(p_tta[np.arange(len(yv)), yv]).mean()),
-            "ece": ece(p, yv), "ece_tta": ece(p_tta, yv),
-            "per_class_val_acc": per_class_acc(pred, yv),
-            "per_class_val_acc_tta": per_class_acc(pred_tta, yv),
-            "confusion_val": confusion(pred, yv).tolist(),
-            "confusion_val_tta": confusion(pred_tta, yv).tolist(),
-            "shifted_val_acc": {g: float((ps.argmax(1)[m] == ys[m]).mean()) for g, m in groups.items()},
-            "shifted_val_acc_tta": {g: float((ps_tta.argmax(1)[m] == ys[m]).mean()) for g, m in groups.items()},
-            "shifted_val_acc_all": float((ps.argmax(1) == ys).mean()),
-            "shifted_val_n": {g: int(m.sum()) for g, m in groups.items()},
-        }
-        assert abs(row["val_acc"] - e["best_val_acc"]) < 1e-9, "checkpoint does not reproduce logged val acc"
-        rows.append(row)
-        print(f"{rid}: val {row['val_acc']:.4f} tta {row['val_acc_tta']:.4f} ece {row['ece']:.4f} "
-              f"shift {row['shifted_val_acc']}")
+    rows = [eval_row(rid, desc, changes, e, Xv, yv, Xs, ys, groups) for rid, desc, changes, e in runs()]
 
     # Selection by val accuracy over (run, TTA on/off). Ties go to the earlier run and to no-TTA.
     cands = [(r["val_acc"], -i, 0, r["id"], False) for i, r in enumerate(rows)]

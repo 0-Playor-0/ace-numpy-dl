@@ -1,0 +1,21 @@
+{
+  "rule": "among B and D: higher val accuracy with flip TTA wins; if |diff| <= 0.0015 (0.15 pt), the higher overall shifted-val accuracy (no TTA, all 6000 images) wins",
+  "B": {
+    "val_acc_tta": 0.9398333333333333,
+    "shifted_val_acc_all": 0.76
+  },
+  "D": {
+    "val_acc_tta": 0.9368333333333333,
+    "shifted_val_acc_all": 0.9103333333333333
+  },
+  "selected": "B",
+  "reason": "val+TTA diff D-B = -0.0030 > 0.15 pt",
+  "mean": 0.28615283578366185,
+  "std": 0.35306586782701355,
+  "tta": "flip",
+  "checkpoint": "runs/cnn_erase_20261019-123428/best.npz",
+  "int8": "runs/cnn_b_int8.npz",
+  "test_float_tta": 0.9349,
+  "test_int8_tta": 0.9344,
+  "test_note": "B kept: Phase 3b/4 test results stand; test not touched"
+}
