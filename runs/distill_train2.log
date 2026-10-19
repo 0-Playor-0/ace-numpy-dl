@@ -1,0 +1,147 @@
+{'P': 0.9261666666666667, 'DS': 0.9268333333333333, 'H': 0.9255}
+copy 0 done (46s)
+copy 1 done (92s)
+copy 2 done (139s)
+copy 3 done (186s)
+{
+  "K": 4,
+  "n": 54000,
+  "seed": 21,
+  "teacher": "E2",
+  "teacher_run": "runs/cnn_e2_finder_cosine_20261019-160440",
+  "augmentation": "crop pad 2 (black fill) + hflip 0.5; no shift aug",
+  "dir": "data/kd_cache_cropflip",
+  "images_dtype": "float16",
+  "logits_dtype": "float32",
+  "logits_on": "the stored float16 images, eval mode",
+  "build_s": 185.6055904160021,
+  "augment_s": 0.6250786713790148,
+  "teacher_forward_s": 184.98051174462307,
+  "files_bytes": {
+    "images.npy": 338688128,
+    "logits.npy": 8640128,
+    "labels.npy": 432128
+  },
+  "total_mb": 331.650146484375,
+  "teacher_train_acc_on_copies": [
+    0.953037037037037,
+    0.9536111111111111,
+    0.9530740740740741,
+    0.953
+  ]
+}
+{'id': 'P', 'rule': 'P if val within 0.3 pt of the best, else max val (10-ep CE screen)', 'val': {'P': 0.9261666666666667, 'DS': 0.9268333333333333, 'H': 0.9255}, 'best_by_val': 'DS', 'old_rule_pick': 'DS', 'screen_s_per_epoch': 67.38542591250152, 'student_epochs': 40, 'epoch_rule': '30 if screen s/epoch > 120 else 40'}
+[student_S0] ep   1 lr 5.72e-02 train 0.6944/0.7518 val 0.5102/0.8023 dead 0.000 |g| 0.602 (65.7s)
+[student_S0] ep   2 lr 5.72e-02 train 0.4116/0.8494 val 0.3981/0.8505 dead 0.000 |g| 0.313 (65.0s)
+[student_S0] ep   3 lr 5.69e-02 train 0.3452/0.8740 val 0.3291/0.8682 dead 0.000 |g| 0.245 (65.9s)
+[student_S0] ep   4 lr 5.64e-02 train 0.3148/0.8855 val 0.3473/0.8742 dead 0.000 |g| 0.217 (66.2s)
+[student_S0] ep   5 lr 5.58e-02 train 0.2967/0.8918 val 0.2851/0.8970 dead 0.000 |g| 0.203 (66.4s)
+[student_S0] ep   6 lr 5.50e-02 train 0.2856/0.8964 val 0.2619/0.9048 dead 0.000 |g| 0.185 (66.4s)
+[student_S0] ep   7 lr 5.40e-02 train 0.2709/0.9020 val 0.2631/0.9033 dead 0.000 |g| 0.179 (65.2s)
+[student_S0] ep   8 lr 5.28e-02 train 0.2616/0.9050 val 0.2961/0.8898 dead 0.000 |g| 0.167 (67.1s)
+[student_S0] ep   9 lr 5.15e-02 train 0.2540/0.9070 val 0.2497/0.9075 dead 0.000 |g| 0.162 (66.4s)
+[student_S0] ep  10 lr 5.00e-02 train 0.2458/0.9104 val 0.2656/0.9045 dead 0.000 |g| 0.157 (65.2s)
+[student_S0] ep  11 lr 4.85e-02 train 0.2384/0.9137 val 0.3018/0.8910 dead 0.000 |g| 0.153 (66.1s)
+[student_S0] ep  12 lr 4.67e-02 train 0.2324/0.9163 val 0.2739/0.8992 dead 0.000 |g| 0.149 (65.9s)
+[student_S0] ep  13 lr 4.49e-02 train 0.2248/0.9192 val 0.2380/0.9137 dead 0.000 |g| 0.143 (66.3s)
+[student_S0] ep  14 lr 4.29e-02 train 0.2195/0.9205 val 0.2416/0.9137 dead 0.000 |g| 0.143 (65.6s)
+[student_S0] ep  15 lr 4.09e-02 train 0.2163/0.9212 val 0.2657/0.9055 dead 0.007 |g| 0.146 (65.5s)
+[student_S0] ep  16 lr 3.88e-02 train 0.2080/0.9248 val 0.2368/0.9132 dead 0.007 |g| 0.138 (65.8s)
+[student_S0] ep  17 lr 3.66e-02 train 0.1997/0.9263 val 0.2265/0.9165 dead 0.007 |g| 0.138 (66.2s)
+[student_S0] ep  18 lr 3.44e-02 train 0.1929/0.9298 val 0.2493/0.9060 dead 0.007 |g| 0.138 (65.7s)
+[student_S0] ep  19 lr 3.21e-02 train 0.1923/0.9288 val 0.2274/0.9195 dead 0.007 |g| 0.141 (68.4s)
+[student_S0] ep  20 lr 2.98e-02 train 0.1831/0.9334 val 0.2333/0.9147 dead 0.007 |g| 0.136 (67.1s)
+[student_S0] ep  21 lr 2.75e-02 train 0.1745/0.9361 val 0.2317/0.9127 dead 0.007 |g| 0.133 (75.9s)
+[student_S0] ep  22 lr 2.52e-02 train 0.1700/0.9383 val 0.2104/0.9237 dead 0.007 |g| 0.134 (72.6s)
+[student_S0] ep  23 lr 2.29e-02 train 0.1636/0.9406 val 0.2264/0.9183 dead 0.007 |g| 0.135 (69.8s)
+[student_S0] ep  24 lr 2.07e-02 train 0.1560/0.9430 val 0.2132/0.9223 dead 0.007 |g| 0.132 (69.5s)
+[student_S0] ep  25 lr 1.85e-02 train 0.1508/0.9444 val 0.2137/0.9225 dead 0.007 |g| 0.133 (70.5s)
+[student_S0] ep  26 lr 1.64e-02 train 0.1459/0.9462 val 0.2100/0.9242 dead 0.007 |g| 0.134 (78.4s)
+[student_S0] ep  27 lr 1.43e-02 train 0.1370/0.9502 val 0.2035/0.9272 dead 0.007 |g| 0.129 (89.6s)
+[student_S0] ep  28 lr 1.24e-02 train 0.1351/0.9512 val 0.2090/0.9233 dead 0.007 |g| 0.134 (87.9s)
+[student_S0] ep  29 lr 1.05e-02 train 0.1263/0.9539 val 0.2038/0.9282 dead 0.007 |g| 0.131 (85.3s)
+[student_S0] ep  30 lr 8.80e-03 train 0.1213/0.9568 val 0.2079/0.9258 dead 0.007 |g| 0.128 (77.9s)
+[student_S0] ep  31 lr 7.20e-03 train 0.1178/0.9578 val 0.2013/0.9263 dead 0.007 |g| 0.130 (74.7s)
+[student_S0] ep  32 lr 5.74e-03 train 0.1114/0.9599 val 0.2054/0.9288 dead 0.007 |g| 0.126 (74.8s)
+[student_S0] ep  33 lr 4.43e-03 train 0.1077/0.9624 val 0.2027/0.9293 dead 0.007 |g| 0.125 (84.3s)
+[student_S0] ep  34 lr 3.28e-03 train 0.1056/0.9624 val 0.2044/0.9280 dead 0.007 |g| 0.127 (84.4s)
+[student_S0] ep  35 lr 2.29e-03 train 0.1017/0.9639 val 0.2050/0.9288 dead 0.007 |g| 0.125 (75.2s)
+[student_S0] ep  36 lr 1.47e-03 train 0.0968/0.9655 val 0.2033/0.9320 dead 0.007 |g| 0.124 (75.8s)
+[student_S0] ep  37 lr 8.33e-04 train 0.0944/0.9671 val 0.2034/0.9315 dead 0.007 |g| 0.122 (77.0s)
+[student_S0] ep  38 lr 3.72e-04 train 0.0943/0.9670 val 0.2048/0.9302 dead 0.007 |g| 0.122 (75.2s)
+[student_S0] ep  39 lr 9.33e-05 train 0.0934/0.9675 val 0.2051/0.9312 dead 0.007 |g| 0.123 (84.3s)
+[student_S0] ep  40 lr 5.21e-10 train 0.0937/0.9668 val 0.2040/0.9307 dead 0.007 |g| 0.121 (78.4s)
+S0 {'run_name': 'student_S0', 'status': 'ok', 'best_epoch': 36, 'best_val_acc': 0.932, 'best_val_loss': 0.20333520993590354, 'wall_time_s': 2883.94377545896, 'run_dir': 'runs/student_S0_20261019-194400', 'student': 'P', 'lr': 0.05724264790639666, 'epochs': 40, 'kd': None, 's_per_epoch': 72.09859438647399}
+[student_S1] ep   1 lr 5.72e-02 train 3.7430/0.7520 val 0.5178/0.8448 dead 0.000 |g| 2.923 (68.5s)
+[student_S1] ep   2 lr 5.72e-02 train 1.0793/0.8749 val 0.3701/0.8715 dead 0.000 |g| 1.291 (76.2s)
+[student_S1] ep   3 lr 5.69e-02 train 0.8136/0.8928 val 0.3014/0.8922 dead 0.000 |g| 0.950 (73.2s)
+[student_S1] ep   4 lr 5.64e-02 train 0.6708/0.9016 val 0.2721/0.8983 dead 0.000 |g| 0.750 (121.3s)
+[student_S1] ep   5 lr 5.58e-02 train 0.6160/0.9068 val 0.2621/0.9062 dead 0.000 |g| 0.675 (70.7s)
+[student_S1] ep   6 lr 5.50e-02 train 0.5557/0.9117 val 0.2284/0.9168 dead 0.000 |g| 0.599 (78.7s)
+[student_S1] ep   7 lr 5.40e-02 train 0.5294/0.9132 val 0.2553/0.9062 dead 0.000 |g| 0.556 (84.9s)
+[student_S1] ep   8 lr 5.28e-02 train 0.5023/0.9159 val 0.2149/0.9190 dead 0.000 |g| 0.526 (71.5s)
+[student_S1] ep   9 lr 5.15e-02 train 0.4789/0.9181 val 0.2362/0.9167 dead 0.000 |g| 0.485 (90.7s)
+[student_S1] ep  10 lr 5.00e-02 train 0.4646/0.9200 val 0.2264/0.9200 dead 0.000 |g| 0.480 (67.2s)
+[student_S1] ep  11 lr 4.85e-02 train 0.4440/0.9196 val 0.2456/0.9133 dead 0.000 |g| 0.446 (73.8s)
+[student_S1] ep  12 lr 4.67e-02 train 0.4348/0.9216 val 0.2265/0.9153 dead 0.000 |g| 0.433 (69.1s)
+[student_S1] ep  13 lr 4.49e-02 train 0.4267/0.9220 val 0.2164/0.9200 dead 0.000 |g| 0.422 (66.9s)
+[student_S1] ep  14 lr 4.29e-02 train 0.4143/0.9230 val 0.2306/0.9148 dead 0.000 |g| 0.409 (66.4s)
+[student_S1] ep  15 lr 4.09e-02 train 0.3947/0.9241 val 0.2051/0.9222 dead 0.000 |g| 0.381 (64.7s)
+[student_S1] ep  16 lr 3.88e-02 train 0.3839/0.9256 val 0.2112/0.9232 dead 0.000 |g| 0.374 (68.8s)
+[student_S1] ep  17 lr 3.66e-02 train 0.3791/0.9264 val 0.2010/0.9258 dead 0.000 |g| 0.373 (68.4s)
+[student_S1] ep  18 lr 3.44e-02 train 0.3630/0.9264 val 0.2120/0.9218 dead 0.000 |g| 0.354 (72.3s)
+[student_S1] ep  19 lr 3.21e-02 train 0.3485/0.9275 val 0.2074/0.9218 dead 0.000 |g| 0.345 (78.1s)
+[student_S1] ep  20 lr 2.98e-02 train 0.3434/0.9288 val 0.2039/0.9223 dead 0.000 |g| 0.337 (71.0s)
+[student_S1] ep  21 lr 2.75e-02 train 0.3303/0.9300 val 0.2117/0.9233 dead 0.000 |g| 0.320 (76.8s)
+[student_S1] ep  22 lr 2.52e-02 train 0.3270/0.9296 val 0.2068/0.9215 dead 0.000 |g| 0.331 (72.4s)
+[student_S1] ep  23 lr 2.29e-02 train 0.3145/0.9310 val 0.1952/0.9247 dead 0.000 |g| 0.310 (74.0s)
+[student_S1] ep  24 lr 2.07e-02 train 0.3110/0.9320 val 0.1894/0.9298 dead 0.000 |g| 0.312 (72.5s)
+[student_S1] ep  25 lr 1.85e-02 train 0.3008/0.9330 val 0.1899/0.9298 dead 0.000 |g| 0.303 (76.5s)
+[student_S1] ep  26 lr 1.64e-02 train 0.2896/0.9324 val 0.1882/0.9277 dead 0.000 |g| 0.285 (79.5s)
+[student_S1] ep  27 lr 1.43e-02 train 0.2864/0.9335 val 0.1892/0.9315 dead 0.000 |g| 0.289 (73.3s)
+[student_S1] ep  28 lr 1.24e-02 train 0.2770/0.9330 val 0.1918/0.9268 dead 0.000 |g| 0.273 (68.5s)
+[student_S1] ep  29 lr 1.05e-02 train 0.2727/0.9341 val 0.1878/0.9300 dead 0.000 |g| 0.274 (73.8s)
+[student_S1] ep  30 lr 8.80e-03 train 0.2646/0.9356 val 0.1856/0.9288 dead 0.000 |g| 0.263 (76.8s)
+[student_S1] ep  31 lr 7.20e-03 train 0.2592/0.9355 val 0.1857/0.9275 dead 0.000 |g| 0.259 (72.9s)
+[student_S1] ep  32 lr 5.74e-03 train 0.2521/0.9359 val 0.1844/0.9297 dead 0.000 |g| 0.243 (74.8s)
+[student_S1] ep  33 lr 4.43e-03 train 0.2497/0.9366 val 0.1830/0.9312 dead 0.000 |g| 0.243 (79.3s)
+[student_S1] ep  34 lr 3.28e-03 train 0.2441/0.9360 val 0.1875/0.9310 dead 0.000 |g| 0.237 (77.0s)
+[student_S1] ep  35 lr 2.29e-03 train 0.2415/0.9373 val 0.1843/0.9300 dead 0.000 |g| 0.232 (94.1s)
+[student_S1] ep  36 lr 1.47e-03 train 0.2382/0.9370 val 0.1830/0.9317 dead 0.000 |g| 0.225 (106.1s)
+[student_S1] ep  37 lr 8.33e-04 train 0.2344/0.9371 val 0.1825/0.9317 dead 0.000 |g| 0.221 (81.0s)
+[student_S1] ep  38 lr 3.72e-04 train 0.2322/0.9373 val 0.1823/0.9318 dead 0.000 |g| 0.216 (75.0s)
+[student_S1] ep  39 lr 9.33e-05 train 0.2309/0.9385 val 0.1820/0.9317 dead 0.000 |g| 0.214 (74.9s)
+[student_S1] ep  40 lr 5.21e-10 train 0.2328/0.9381 val 0.1817/0.9322 dead 0.000 |g| 0.218 (76.1s)
+S1 {'run_name': 'student_S1', 'status': 'ok', 'best_epoch': 40, 'best_val_acc': 0.9321666666666667, 'best_val_loss': 0.18173794324199358, 'wall_time_s': 3057.6972235409776, 'run_dir': 'runs/student_S1_20261019-203206', 'student': 'P', 'lr': 0.05724264790639666, 'epochs': 40, 'kd': (4.0, 0.9), 's_per_epoch': 76.44243058852445}
+S1 {'file': 'runs/student_S1_int8.ace8', 'file_bytes': 43770, 'budget': 50000, 'fold_max_abs_logit_diff': 1.71661376953125e-05, 'val_acc': 0.928, 'val_acc_tta': 0.9323333333333333, 'fake_val_acc': 0.928, 'agree_int_vs_fake': 1.0, 'agree_int_vs_float': 0.984, 'shifted_val_acc': {'rotate': 0.8920792079207921, 'noise': 0.20999519461797214, 'brightness-mul': 0.926673751328374, 'brightness-add': 0.7463465553235908}, 'shifted_val_acc_tta': {'rotate': 0.9024752475247525, 'noise': 0.21960595867371457, 'brightness-mul': 0.926673751328374, 'brightness-add': 0.7567849686847599}, 'shifted_val_acc_all': 0.6376666666666667, 'shifted_val_acc_all_tta': 0.6461666666666667}
+S0 {'val_acc': 0.932, 'val_acc_tta': 0.9366666666666666, 'ece': 0.021238813178265138, 'shifted_val_acc_all': 0.63}
+S1 {'val_acc': 0.9321666666666667, 'val_acc_tta': 0.9336666666666666, 'ece': 0.014672547204355157, 'shifted_val_acc_all': 0.6371666666666667}
+S0 {'file': 'runs/student_S0_int8.ace8', 'file_bytes': 43770, 'budget': 50000, 'fold_max_abs_logit_diff': 3.4332275390625e-05, 'val_acc': 0.9266666666666666, 'val_acc_tta': 0.9336666666666666, 'fake_val_acc': 0.9266666666666666, 'agree_int_vs_fake': 1.0, 'agree_int_vs_float': 0.9806666666666667, 'shifted_val_acc': {'rotate': 0.8722772277227723, 'noise': 0.24171071600192215, 'brightness-mul': 0.9181721572794899, 'brightness-add': 0.6659707724425887}, 'shifted_val_acc_tta': {'rotate': 0.8886138613861386, 'noise': 0.23450264296011533, 'brightness-mul': 0.9309245483528161, 'brightness-add': 0.6931106471816284}, 'shifted_val_acc_all': 0.6278333333333334, 'shifted_val_acc_all_tta': 0.6371666666666667}
+[test-once] student_S0_float: {'model': 'S0', 'tta': True, 'test_acc': 0.9304}
+[test-once] student_S0_int8: {'model': 'S0', 'tta': True, 'file_bytes': 43770, 'test_acc': 0.9281}
+selected S0 {
+  "float": 0.9304,
+  "int8": 0.9281,
+  "E2_float": 0.9403,
+  "E2_int8": 0.9399,
+  "int8_minus_E2_float_pt": -1.2199999999999989,
+  "int8_minus_E2_int8_pt": -1.1799999999999922,
+  "criterion": "student int8 test >= E2 float test - 2.0 pt",
+  "pass": true
+}
+| model | val | val+TTA | test | ECE | shifted all | noise | params | size KB |
+|---|---|---|---|---|---|---|---|---|
+| A | 0.9362 | 0.9393 | 0.9325 (no TTA) | 0.0066 | 0.683 | 0.293 | 468,138 | 1831.2 |
+| C | 0.9360 | 0.9383 | – | 0.0848 | 0.732 | 0.450 | 468,138 | 1831.2 |
+| B | 0.9377 | 0.9398 | 0.9349 | 0.0066 | 0.760 | 0.506 | 468,138 | 1831.2 |
+| B int8 | 0.9368 | 0.9387 | 0.9344 | – | 0.758 | 0.502 | 468,138 | 466.9 |
+| E1 | 0.9387 | 0.9398 | – | 0.0087 | 0.691 | 0.352 | 468,138 | 1831.2 |
+| E2 | 0.9448 | 0.9450 | 0.9403 | 0.0043 | 0.671 | 0.252 | 468,138 | 1831.2 |
+| E2 int8 | 0.9435 | 0.9447 | 0.9399 | – | 0.670 | 0.248 | 468,138 | 466.9 |
+| D | 0.9360 | 0.9368 | 0.9278 | 0.0129 | 0.910 | 0.875 | 468,138 | 1831.2 |
+| D int8 | 0.9358 | 0.9370 | 0.9282 | – | 0.910 | 0.875 | 468,138 | 466.9 |
+| S0 | 0.9320 | 0.9367 | 0.9304 | 0.0212 | 0.630 | 0.235 | 42,570 | 167.5 |
+| S0 int8 | 0.9267 | 0.9337 | 0.9281 | – | 0.628 | 0.242 | 42,570 | 42.7 |
+| S1 | 0.9322 | 0.9337 | – | 0.0147 | 0.637 | 0.209 | 42,570 | 167.5 |
+| S1 int8 | 0.9280 | 0.9323 | – | – | 0.638 | 0.210 | 42,570 | 42.7 |
+{'random erasing (B - A)': 0.05, 'label smoothing (C - B)': -0.15, 'finder lr, constant (E1 - A)': 0.05, 'cosine warmup (E2 - E1)': 0.52, 'shift aug + erase on E2 recipe (D - E2)': -0.82, 'KD T=4 (S1 - S0)': -0.3, 'int8 PTQ, E2 (E2 int8 - E2)': -0.03, 'int8 PTQ, student (S0 int8 - S0)': -0.3, 'student vs teacher (S0 - E2)': -0.83, 'shifted overall, shift aug (D - E2)': 23.93, 'noise, random erasing (B - A)': 21.29}

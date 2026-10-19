@@ -11,15 +11,23 @@ Pipeline:
 
 Scheme: symmetric, zero_point = 0 everywhere, int8 range [-127, 127] (−128 unused).
 Activations are kept NHWC inside the engines; conv columns are ordered (kh, kw, C).
+Compute layers: conv, dwconv (depthwise, Wm (C, kh*kw)), linear. Global average pooling ("gap")
+is integer: the int8 input is summed and divided by H*W with round-half-up, keeping the scale, so
+the scale of the layer after a gap is calibrated on the gap's INPUT.
+
+Serialization: Int8Model.save/load (.npz, Phase 4) and save_compact/load_compact, a flat
+little-endian binary (small header + raw arrays) whose size is the deployed model size.
 """
 
 import json
+import struct
 
 import numpy as np
 
 from acenet import nn
 
 QMAX = 127
+COMPUTE = ("conv", "dwconv", "linear")
 INT32_MAX = 2 ** 31 - 1
 CALIBRATORS = ("minmax", "p99.99")
 
@@ -35,17 +43,23 @@ def fold_bn(model):
     i = 0
     while i < len(layers):
         m = layers[i]
-        if isinstance(m, (nn.Conv2D, nn.Linear)):
+        if isinstance(m, (nn.Conv2D, nn.DepthwiseConv2D, nn.Linear)):
             W = m.W.data.astype(np.float64)
-            F = W.shape[0] if isinstance(m, nn.Conv2D) else W.shape[1]
+            F = W.shape[1] if isinstance(m, nn.Linear) else W.shape[0]
             b = m.b.data.astype(np.float64) if m.b is not None else np.zeros(F)
             nxt = layers[i + 1] if i + 1 < len(layers) else None
             if isinstance(nxt, nn._BatchNorm):
                 g = nxt.gamma.data.astype(np.float64) / np.sqrt(nxt.running_var.astype(np.float64) + nxt.eps)
                 b = (b - nxt.running_mean.astype(np.float64)) * g + nxt.beta.data.astype(np.float64)
-                W = W * (g.reshape(-1, 1, 1, 1) if isinstance(m, nn.Conv2D) else g.reshape(1, -1))
+                W = W * (g.reshape(1, -1) if isinstance(m, nn.Linear) else g.reshape(-1, 1, 1, 1))
                 i += 1
-            if isinstance(m, nn.Conv2D):
+            if isinstance(m, nn.DepthwiseConv2D):
+                if m.stride != 1:
+                    raise NotImplementedError("only stride-1 convs")
+                C, _, kh, kw = W.shape
+                ops.append({"op": "dwconv", "Wm": W.reshape(C, kh * kw).astype(np.float32),
+                            "b": b.astype(np.float32), "k": (kh, kw), "pad": int(m.padding)})
+            elif isinstance(m, nn.Conv2D):
                 if m.stride != 1:
                     raise NotImplementedError("only stride-1 convs")
                 Fo, C, kh, kw = W.shape
@@ -62,6 +76,8 @@ def fold_bn(model):
             ops.append({"op": "pool", "k": m.kernel_size})
         elif isinstance(m, nn.Flatten):
             ops.append({"op": "flatten"})
+        elif isinstance(m, nn.GlobalAvgPool2D):
+            ops.append({"op": "gap"})
         elif isinstance(m, nn.Dropout):
             pass
         else:
@@ -71,7 +87,7 @@ def fold_bn(model):
 
 
 def compute_layers(ops):
-    return [o for o in ops if o["op"] in ("conv", "linear")]
+    return [o for o in ops if o["op"] in COMPUTE]
 
 
 # ---------------------------------------------------------------- shared NHWC helpers
@@ -86,6 +102,24 @@ def im2col(x, k, pad):
     Ho, Wo = H - kh + 1, W - kw + 1
     win = np.lib.stride_tricks.sliding_window_view(x, (kh, kw), axis=(1, 2))  # N, Ho, Wo, C, kh, kw
     return win.transpose(0, 1, 2, 4, 5, 3).reshape(N * Ho * Wo, kh * kw * C), (N, Ho, Wo)
+
+
+def dw_windows(x, k, pad):
+    """Grouped im2col for depthwise conv: x (N, H, W, C) -> (N, Ho, Wo, C, kh*kw) in x's dtype."""
+    kh, kw = k
+    if pad:
+        x = np.pad(x, ((0, 0), (pad, pad), (pad, pad), (0, 0)))
+    N, H, W, C = x.shape
+    win = np.lib.stride_tricks.sliding_window_view(x, (kh, kw), axis=(1, 2))  # N, Ho, Wo, C, kh, kw
+    return np.ascontiguousarray(win).reshape(N, H - kh + 1, W - kw + 1, C, kh * kw)
+
+
+def gap_int(x):
+    """Integer global average pool: int8 (N, H, W, C) -> int8 (N, C), round(sum / HW) half up,
+    computed as floor((2 * sum + HW) / (2 * HW)) in int32. Same scale as the input."""
+    hw = x.shape[1] * x.shape[2]
+    s = x.sum(axis=(1, 2), dtype=np.int32)
+    return ((2 * s + hw) // (2 * hw)).astype(np.int8)
 
 
 def maxpool_nhwc(x, k):
@@ -121,11 +155,12 @@ def float_forward(ops, x, qspec=None, quantized=None, hook=None):
     `quantized` (default: all): the layer's input activation, weights and bias are put on their
     int8 / int32 grids. hook(i, h) sees the input of compute layer i (float, before quantization)."""
     h = to_nhwc(x.astype(np.float32))
-    li = 0
+    li, hooked = 0, False
     for o in ops:
-        if o["op"] in ("conv", "linear"):
-            if hook is not None:
+        if o["op"] in COMPUTE:
+            if hook is not None and not hooked:
                 hook(li, h)
+            hooked = False
             Wm, b = o["Wm"], o["b"]
             if qspec is not None and (quantized is None or li in quantized):
                 q = qspec[li]
@@ -135,9 +170,21 @@ def float_forward(ops, x, qspec=None, quantized=None, hook=None):
             if o["op"] == "conv":
                 cols, (N, Ho, Wo) = im2col(h, o["k"], o["pad"])
                 h = (cols @ Wm.T + b).reshape(N, Ho, Wo, -1)
+            elif o["op"] == "dwconv":
+                h = np.einsum("nhwck,ck->nhwc", dw_windows(h, o["k"], o["pad"]), Wm) + b
             else:
                 h = h @ Wm.T + b
             li += 1
+        elif o["op"] == "gap":
+            # the next compute layer's input scale covers the gap INPUT (as in the int engine)
+            if hook is not None:
+                hook(li, h)
+                hooked = True
+            if qspec is not None and (quantized is None or li in quantized):
+                s = np.float32(qspec[li]["s_in"])
+                h = round_half_up(fake_q(h, s).mean(axis=(1, 2)) / s) * s
+            else:
+                h = h.mean(axis=(1, 2))
         elif o["op"] == "relu":
             h = np.maximum(h, 0)
         elif o["op"] == "pool":
@@ -262,7 +309,7 @@ class Int8Model:
         for o in ops:
             a = {k: (list(v) if isinstance(v, tuple) else v) for k, v in o.items() if k not in ("Wm", "b")}
             arch.append(a)
-            if o["op"] in ("conv", "linear"):
+            if o["op"] in COMPUTE:
                 q = qspec[li]
                 layers.append({"w": q["w"], "b": q["b"], "M0": q["M0"], "shift": q["shift"]})
                 li += 1
@@ -282,11 +329,18 @@ class Int8Model:
 
         t(h)
         for a in self.arch:
-            if a["op"] in ("conv", "linear"):
+            if a["op"] in COMPUTE:
                 L = self.layers[li]
                 if a["op"] == "conv":
                     cols, (N, Ho, Wo) = im2col(h, a["k"], a["pad"])
                     acc = t(int_matmul(t(cols), L["w32"], L["b"]))
+                elif a["op"] == "dwconv":
+                    win = t(dw_windows(h, a["k"], a["pad"]))
+                    check_accumulator_bound(win.shape[-1], L["b"])
+                    N, Ho, Wo = win.shape[:3]
+                    acc = np.einsum("nhwck,ck->nhwc", win.astype(np.int32), L["w32"])
+                    acc += L["b"]
+                    acc = t(acc.reshape(N * Ho * Wo, -1))
                 else:
                     N, acc = h.shape[0], t(int_matmul(h, L["w32"], L["b"]))
                 if li == n - 1:
@@ -295,9 +349,11 @@ class Int8Model:
                     h = t(out.astype(np.int32))
                 else:
                     h = t(requantize(acc, L["M0"], L["shift"]))
-                    if a["op"] == "conv":
+                    if a["op"] != "linear":
                         h = h.reshape(N, Ho, Wo, -1)
                 li += 1
+            elif a["op"] == "gap":
+                h = t(gap_int(h))
             elif a["op"] == "relu":
                 h = t(np.maximum(h, np.int8(0)))
             elif a["op"] == "pool":
@@ -331,6 +387,85 @@ class Int8Model:
     def load(cls, path):
         with np.load(path, allow_pickle=False) as d:
             arch = json.loads(str(d["arch"]))
-            n = sum(a["op"] in ("conv", "linear") for a in arch)
+            n = sum(a["op"] in COMPUTE for a in arch)
             layers = [{k: d[f"l{i}_{k}"] for k in ("w", "b", "M0", "shift")} for i in range(n)]
             return cls(arch, float(d["input_scale"]), layers)
+
+    # -------- compact flat binary (the deployed artifact; every byte counts toward the size)
+    #
+    # little-endian. header: b"ACE8", version u8, n_ops u8, input_scale f32
+    # per op: code u8 (+ conv/dwconv: kh u8, kw u8, pad u8, F u16, K u16 | linear: F u16, K u16 | pool: k u8)
+    # then per compute layer in order: w int8 [F*K] (row-major (F, K)), b int32 [F], M0 int32 [F], shift int8 [F]
+
+    def save_compact(self, path):
+        buf = compact_bytes(self)
+        with open(path, "wb") as f:
+            f.write(buf)
+        return len(buf)
+
+    @classmethod
+    def load_compact(cls, path):
+        with open(path, "rb") as f:
+            return from_compact_bytes(cls, f.read())
+
+
+MAGIC, VERSION = b"ACE8", 1
+OPCODES = {"conv": 1, "dwconv": 2, "linear": 3, "relu": 4, "pool": 5, "flatten": 6, "gap": 7}
+
+
+def compact_bytes(qm):
+    head = [MAGIC, struct.pack("<BBf", VERSION, len(qm.arch), qm.input_scale)]
+    body, li = [], 0
+    for a in qm.arch:
+        head.append(struct.pack("<B", OPCODES[a["op"]]))
+        if a["op"] in COMPUTE:
+            L = qm.layers[li]
+            F, K = L["w"].shape[0], int(np.prod(L["w"].shape[1:]))
+            if a["op"] == "linear":
+                head.append(struct.pack("<HH", F, K))
+            else:
+                head.append(struct.pack("<BBBHH", a["k"][0], a["k"][1], a["pad"], F, K))
+            body += [np.ascontiguousarray(L["w"], "<i1").tobytes(), np.ascontiguousarray(L["b"], "<i4").tobytes(),
+                     np.ascontiguousarray(L["M0"], "<i4").tobytes(), np.ascontiguousarray(L["shift"], "<i1").tobytes()]
+            li += 1
+        elif a["op"] == "pool":
+            head.append(struct.pack("<B", a["k"]))
+    return b"".join(head + body)
+
+
+def from_compact_bytes(cls, buf):
+    if buf[:4] != MAGIC:
+        raise ValueError("not an ACE8 file")
+    version, n_ops, input_scale = struct.unpack_from("<BBf", buf, 4)
+    if version != VERSION:
+        raise ValueError(f"unsupported version {version}")
+    names = {v: k for k, v in OPCODES.items()}
+    pos, arch, shapes = 10, [], []
+    for _ in range(n_ops):
+        op = names[buf[pos]]
+        pos += 1
+        a = {"op": op}
+        if op in ("conv", "dwconv"):
+            kh, kw, pad, F, K = struct.unpack_from("<BBBHH", buf, pos)
+            pos += 7
+            a.update(k=[kh, kw], pad=pad)
+            shapes.append((F, K))
+        elif op == "linear":
+            shapes.append(struct.unpack_from("<HH", buf, pos))
+            pos += 4
+        elif op == "pool":
+            a["k"] = buf[pos]
+            pos += 1
+        arch.append(a)
+    layers = []
+    for F, K in shapes:
+        w = np.frombuffer(buf, "<i1", F * K, pos).reshape(F, K).astype(np.int8)
+        pos += F * K
+        b = np.frombuffer(buf, "<i4", F, pos).astype(np.int32)
+        M0 = np.frombuffer(buf, "<i4", F, pos + 4 * F).astype(np.int32)
+        shift = np.frombuffer(buf, "<i1", F, pos + 8 * F).astype(np.int8)
+        pos += 9 * F
+        layers.append({"w": w, "b": b, "M0": M0, "shift": shift})
+    if pos != len(buf):
+        raise ValueError(f"trailing bytes: parsed {pos} of {len(buf)}")
+    return cls(arch, input_scale, layers)

@@ -1,0 +1,37 @@
+{
+  "E2_float": {
+    "tta": true,
+    "test_acc": 0.9403,
+    "test_nll": 0.16365139615775315
+  },
+  "E2_int8": {
+    "calibrator": "p99.99",
+    "tta": true,
+    "test_acc": 0.9399,
+    "float_test_tta": 0.9403,
+    "drop": 0.00040000000000006697
+  },
+  "D_float": {
+    "tta": true,
+    "test_acc": 0.9278,
+    "test_nll": 0.20009693531801373
+  },
+  "D_int8": {
+    "calibrator": "p99.99",
+    "tta": true,
+    "test_acc": 0.9282,
+    "float_test_tta": 0.9278,
+    "drop": -0.00040000000000006697
+  },
+  "student_S0_float": {
+    "model": "S0",
+    "tta": true,
+    "test_acc": 0.9304
+  },
+  "student_S0_int8": {
+    "model": "S0",
+    "tta": true,
+    "file_bytes": 43770,
+    "test_acc": 0.9281
+  }
+}

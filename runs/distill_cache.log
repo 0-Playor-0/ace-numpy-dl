@@ -1,0 +1,30 @@
+copy 0 done (47s)
+copy 1 done (96s)
+copy 2 done (147s)
+copy 3 done (196s)
+{
+  "K": 4,
+  "n": 54000,
+  "seed": 21,
+  "teacher": "E2",
+  "teacher_run": "runs/cnn_e2_finder_cosine_20261019-160440",
+  "augmentation": "crop pad 2 (black fill) + hflip 0.5 + random erasing (p 0.5, area 0.02-0.2, N(0,1)); no shift aug",
+  "images_dtype": "float16",
+  "logits_dtype": "float32",
+  "logits_on": "the stored float16 images, eval mode",
+  "build_s": 195.8664503339678,
+  "augment_s": 1.870723501779139,
+  "teacher_forward_s": 193.99572683218867,
+  "files_bytes": {
+    "images.npy": 338688128,
+    "logits.npy": 8640128,
+    "labels.npy": 432128
+  },
+  "total_mb": 331.650146484375,
+  "teacher_train_acc_on_copies": [
+    0.8738148148148148,
+    0.877462962962963,
+    0.8724259259259259,
+    0.8735925925925926
+  ]
+}

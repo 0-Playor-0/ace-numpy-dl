@@ -240,3 +240,26 @@ class Sequential(Module):
 
     def __len__(self):
         return len(self.layers)
+
+
+class DepthwiseConv2D(Module):
+    """Depthwise NCHW convolution (one k x k filter per channel). W (C, 1, k, k) ~ N(0, 2 / (k * k))
+    (He-normal, fan-in k*k), b = 0; bias=False drops b (redundant right before batch norm)."""
+
+    def __init__(self, channels, kernel_size, rng, stride=1, padding=0, bias=True, dtype=np.float32):
+        super().__init__()
+        kh, kw = (kernel_size, kernel_size) if isinstance(kernel_size, int) else kernel_size
+        std = np.sqrt(2.0 / (kh * kw))
+        self.W = Tensor((rng.standard_normal((channels, 1, kh, kw)) * std).astype(dtype), requires_grad=True)
+        self.b = Tensor(np.zeros(channels, dtype=dtype), requires_grad=True) if bias else None
+        self.stride, self.padding = stride, padding
+
+    def forward(self, x):
+        return ops.depthwise_conv2d(x, self.W, self.b, self.stride, self.padding)
+
+
+class GlobalAvgPool2D(Module):
+    """(N, C, H, W) -> (N, C): mean over the spatial axes."""
+
+    def forward(self, x):
+        return x.mean(axis=(2, 3))

@@ -1,46 +1,38 @@
-# ACE-Net progress (Phases 0–6a done; next: distillation, not started)
+# ACE-Net progress (Phases 0–6b done; next: Phase 7, not started)
 
-| model | val | val+TTA | ECE | shifted all | noise | test (once) |
+| model (test once, flip TTA unless noted) | val+TTA | test float | test int8 | shifted all | noise | size |
 |---|---|---|---|---|---|---|
-| MLP 784-256-128-10 (SGD / Adam) | 0.8985 / 0.8983 | – | – | – | – | 0.8880 / 0.8916 |
-| A: CNN AdamW 1e-3 wd 5e-4, 20 ep, crop+flip | 0.9362 | 0.9393 | 0.0066 | 0.683 | 0.293 | 0.9325 |
-| **B = A + random erasing (FINAL)** | 0.9377 | **0.9398** | 0.0066 | 0.760 | 0.506 | **0.9349** (TTA) |
-| C = B + label smoothing 0.1 | 0.9360 | 0.9383 | 0.0848 | 0.732 | 0.450 | – |
-| E1 = A + finder lr 9.1e-3, constant | 0.9387 | 0.9398 | 0.0087 | 0.691 | 0.352 | – |
-| E2 = A + finder lr + CosineWarmup(1 ep) | **0.9448** | **0.9450** | 0.0043 | 0.671 | 0.252 | – |
-| D = B + shift aug + finder lr + CosineWarmup | 0.9360 | 0.9368 | 0.0129 | **0.910** | **0.875** | – |
-| **B int8 PTQ (p99.99) + TTA (FINAL int8)** | 0.9368 | 0.9387 | – | – | – | **0.9344** |
+| MLP 784-256-128-10 (Adam) | – | 0.8916 (no TTA) | – | – | – | – |
+| A: CNN 32-32-64-64-fc128, AdamW 1e-3, crop+flip | 0.9393 | 0.9325 (no TTA) | – | 0.683 | 0.293 | – |
+| B = A + random erasing (Phase 3b/4 final) | 0.9398 | 0.9349 | 0.9344 | 0.760 | 0.506 | 467 KB npz |
+| **E2 = A + finder lr + CosineWarmup — FINAL clean model / teacher** | **0.9450** | **0.9403** | **0.9399** | 0.671 | 0.252 | 467 KB npz |
+| D = B + shift aug + finder lr + CosineWarmup | 0.9368 | 0.9278 | 0.9282 | **0.910** | **0.875** | 467 KB npz |
+| **S0 student (P, 42.6k params, CE) — FINAL student** | 0.9367 (int8 0.9337) | 0.9304 | **0.9281** | 0.628 | 0.242 | **43,770 B** |
+| S1 student (P, KD T=4 α=0.9) | 0.9337 (int8 0.9323) | – | – | 0.638 | 0.210 | 43,770 B |
 
-All rows: runs/ablation.json (merged 3b + 6a format). Robustness numbers: runs/robustness.json and docs/robustness.md (draft).
-Checkpoints (best.npz; `entry(rid)`/`load_model` in experiments/cnn_ablation.py): A cnn_const_20261019-114445 · B cnn_erase_20261019-123428 ·
-C cnn_erase_ls_… · E1 cnn_e1_finder_const_20261019-151959 · E2 cnn_e2_finder_cosine_20261019-160440 · D cnn_d_shift_finder_cosine_20261019-170443.
-Final model config (checkpoint, int8 npz, train mean/std): runs/final_model.json.
+Full table and per-trick deltas: docs/ablation.md and runs/ablation_6b.json. Phase 6b state: runs/distill.json. All test numbers: runs/test_once.json.
+Checkpoints: runs/<run>/best.npz. Teachers via `entry(rid)`/`load_model` (experiments/cnn_ablation.py); students via `load_student(sid)` (experiments/distill.py).
+Int8 files: runs/cnn_{b,e2,d}_int8.npz (Phase 4 format) and runs/student_S{0,1}_int8.ace8 (compact; `Int8Model.load_compact`).
 
-## Phase 5+6a
-- LR finder (acenet/optim.py `lr_finder`, runs/lr_finder.{json,png}): 1e-6→1 exponential over 422 steps, no early stop. The smoothed-loss min is at 9.1e-2, so min/10 = 9.1e-3 (used). The steepest-descent point is 1.5e-4.
-  9.1× A's lr, so E1 was run. Caveat: the EMA (0.98) lags about 0.7 decades, which biases both suggestions.
-- CosineWarmup is per batch: linear warmup over 1 epoch, then cosine to 0 (tests in tests/test_optim.py).
-- Shift aug (`data.shift_augment`, own rng seed 7): it runs after crop/flip and before erasing. It adds 1.85 ms per batch of 128 (0.83 → 2.68 ms).
-- Selection rule, fixed before results: B vs D on val+TTA, with ties within 0.15 pt going to shifted-val. D − B = −0.30 pt, so **B is kept**. Test was not touched, and D was not quantized.
-- Noise mechanism: clipping lifts the background mean to σ/√(2π), measured 0.05–0.11. A loses 24–30 pt to each component (background, object) alone and 64 pt to both. Erasing (B) fixes the background part; D fixes most of both.
-- Wall times (s): E1 2679, E2 3569 (about 1,100 s of that is CPU contention from other apps in epochs 1–4), D 2528. Normal speed is 117–140 s per epoch.
-- experiments/hidden_eval.py auto-detects .npz, idx(.gz) and PNG folders (stdlib PNG codec). It converts to 28×28 grayscale, logging each conversion, and runs the final float and int8 models with TTA.
-  Self-test on shifted val (uint8): npz, idx and png give identical predictions (float 0.7672, int8 0.7672). A 56×56 RGB PNG variant agrees 100% with the reference.
+## Phase 6b (pre-registered in commit 693f9c2 before any evaluation)
+- Selection: the final clean model is the best val+TTA among all val-evaluated runs, which is E2. The hidden-set report will cover exactly E2, B and D. Teacher = E2.
+- New pieces: `ops.depthwise_conv2d` (offset form, 2–3× faster than grouped im2col; gradchecked), `nn.GlobalAvgPool2D`, and `ops.kd_loss` (T²-scaled KL + CE; gradchecked).
+  Also: `data.CacheLoader`, `fit(loss_fn=)`, dwconv + integer GAP in the int8 engine, and the compact `.ace8` format (header 56 B; round-trip test). Test-once guard: `distill.once()`.
+- Screen (10 ep CE, AdamW + finder lr + CosineWarmup, cache v1): val P 0.9262 (68 s/ep), DS 0.9268 (215 s/ep), H 0.9255 (168 s/ep). P picked (within 0.3 pt). 40 epochs.
+- Student P: conv 16-24 @28 | 48 @14 | 64 @7, GAP, fc10. 6.2M MACs, lr 5.7e-2 (finder min/10). 72–76 s/epoch.
 
-## Key decisions
-- Test-once guards: runs/mlp_test.json, cnn_test.json, cnn_ablation.json "test", cnn_b_int8.json "test", final_model.json "test_float".
-- Selection is always on val (split seed 0; run seed 1). Calibration (ECE and int8 scales) uses train data only.
-- Shifted val is not an independent check for D, because its augmentation covers the same kinds and ranges.
+## Deviations (user-directed, all recorded before the affected runs)
+- Cache v1 (crop+flip+erase) gave E2 only 0.873 train acc, so it was used for the screen only. Cache v2 (data/kd_cache_cropflip) is crop+flip, same K=4 and seed 21: E2 0.953, 332 MB, built in 186 s. All S runs use v2.
+- Screen pick: P if within 0.3 pt of the best (DS was best by 0.07 pt). S-run epochs: 30 if > 120 s/ep (not triggered).
+- S2 gate (val only): S1 int8 val+TTA 0.9323 ≥ 0.925, so **S2 was not trained**.
+- Final student = best **int8** val+TTA among the trained S runs (S0 0.9337 > S1 0.9323). Only S0 touched test, once. The code asserts this.
+- Teachers E2 and D (step 1) were tested before the cache/student work, per plan. D's int8 used the fixed p99.99 calibrator, as in 6a.
 
-## Open issues
-- The tradeoff: B is best by the fixed clean-val rule (noise 0.51), and D is far more robust (noise 0.875). For a shifted hidden set, D would be the better deployment. The rule chose B.
-- E2's schedule gives +0.5 pt clean. D's train acc of 0.887 (augmented) and its best epoch of 20 suggest it underfits. An untested candidate is E2's recipe plus shift aug, trained longer.
-- Shirt is still the weakest class (0.80–0.86).
+## Decisions / findings
+- Criterion: S0 int8 test 0.9281 ≥ E2 float 0.9403 − 2.0 = 0.9203 → **PASS** (−1.22 pt vs E2 float, −1.18 vs E2 int8). Size is 43,770 B ≤ 50,000.
+- KD did not help on the selection metric (−0.30 val+TTA), though it improved ECE, NLL and rotate/brightness. The teacher is only 95% right on the cache.
+- The student's int8 cost (−0.30 val+TTA) is 10× E2's (−0.03). Student shifted val by kind (int8): rotate 0.872, noise 0.242, brightness-mul 0.918, brightness-add 0.666.
 
-## Phase 6b pre-registration (written 2026-10-19, before any 6b evaluation)
-- (a) Selection rule revised: the final clean model is chosen by val+TTA among ALL val-evaluated runs (A, B, C, E1, E2, D) → **E2** (0.9450).
-  Val-only selection; E2's test set is still untouched. B stays the int8 reference already reported.
-- (b) Hidden-set report will cover exactly **E2, B and D** (float + int8, flip TTA). Declared before the hidden set is released.
-- (c) Distillation teacher = **E2** (single model, no ensemble).
-
-## Next: distillation (not started). Hidden set: run `python -m experiments.hidden_eval <path> --name hidden` and fill docs/robustness.md §5.
+## Open issues / Phase 7
+- experiments/hidden_eval.py still reads runs/final_model.json (B). Extend it to E2, B and D (float + int8), as pre-registered, before the hidden set is released.
+- The student is not robust (noise 0.24). Untried: student trained on a shift-aug cache, or D as teacher. The ~300 MB caches in data/ can be deleted once no longer needed.

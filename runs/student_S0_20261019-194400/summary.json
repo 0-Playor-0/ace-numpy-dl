@@ -1,0 +1,11 @@
+{
+  "run_name": "student_S0",
+  "run_dir": "runs/student_S0_20261019-194400",
+  "status": "ok",
+  "diverged_at": null,
+  "epochs_run": 40,
+  "best_epoch": 36,
+  "best_val_acc": 0.932,
+  "best_val_loss": 0.20333520993590354,
+  "wall_time_s": 2883.94377545896
+}

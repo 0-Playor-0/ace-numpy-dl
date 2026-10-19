@@ -320,3 +320,82 @@ def batchnorm(x, gamma, beta, axes, eps=1e-5, return_stats=False):
     if return_stats:
         return res, mu.reshape(gamma.shape), var.reshape(gamma.shape)
     return res
+
+
+def depthwise_conv2d(x, W, b=None, stride=1, padding=0):
+    """Depthwise 2D cross-correlation (groups = channels). x (N, C, H, W), W (C, 1, kh, kw), b (C,)
+    -> (N, C, Ho, Wo).
+
+    Equivalent to grouped im2col (each channel's (Ho*Wo, kh*kw) window matrix times its kh*kw filter),
+    but computed as kh*kw in-place multiply-adds of strided shifted views, without materializing the
+    windows: 2-3x faster than the im2col form on CPU (measured 62 vs 164 ms fwd+bwd, 128x32x28x28).
+    Backward: dW[:, i, j] = sum over (N, Ho, Wo) of g * shifted view; dx by col2im with one
+    strided slice-add per kernel offset (as conv2d). No loops over samples or pixels.
+    """
+    sh, sw = _pair_int(stride)
+    ph, pw = _pair_int(padding)
+    N, C, H, Wd = x.shape
+    Cw, one, kh, kw = W.shape
+    if Cw != C or one != 1:
+        raise ValueError(f"depthwise_conv2d: weight {W.shape} does not match {C} input channels")
+    xp = np.pad(x.data, ((0, 0), (0, 0), (ph, ph), (pw, pw))) if ph or pw else x.data
+    Hp, Wp = xp.shape[2:]
+    Ho, Wo = (Hp - kh) // sh + 1, (Wp - kw) // sw + 1
+    w = W.data.reshape(C, kh, kw)
+
+    def view(a, i, j):
+        return a[:, :, i:i + sh * (Ho - 1) + 1:sh, j:j + sw * (Wo - 1) + 1:sw]
+
+    out = np.zeros((N, C, Ho, Wo), dtype=np.result_type(x.data, W.data))
+    tmp = np.empty_like(out)
+    for i in range(kh):
+        for j in range(kw):
+            np.multiply(view(xp, i, j), w[:, i, j].reshape(1, C, 1, 1), out=tmp)
+            out += tmp
+    if b is not None:
+        out += b.data.reshape(1, C, 1, 1)
+    parents = (x, W) if b is None else (x, W, b)
+
+    def backward(g):
+        dW = np.empty_like(w)
+        for i in range(kh):
+            for j in range(kw):
+                dW[:, i, j] = np.einsum("nchw,nchw->c", g, view(xp, i, j))
+        dx = None
+        if x.requires_grad:
+            dxp = np.zeros_like(xp)
+            t = np.empty_like(g)
+            for i in range(kh):
+                for j in range(kw):
+                    np.multiply(g, w[:, i, j].reshape(1, C, 1, 1), out=t)
+                    view(dxp, i, j)[...] += t
+            dx = dxp[:, :, ph:ph + H, pw:pw + Wd]
+        dW = dW.reshape(C, 1, kh, kw)
+        if b is None:
+            return dx, dW
+        return dx, dW, g.sum(axis=(0, 2, 3))
+
+    return _make(out, parents, backward)
+
+
+# Distillation ----------------------------------------------------------------------
+
+def kd_loss(student_logits, teacher_logits, labels, T=4.0, alpha=0.9):
+    """Hinton et al. (2015) distillation loss, built from existing ops:
+
+        alpha * T^2 * KL(softmax(t/T) || softmax(s/T)) + (1 - alpha) * CE(s, y)
+
+    KL is summed over classes and averaged over the batch; it includes the teacher-entropy term,
+    so it is exactly 0 when s == t. teacher_logits is a constant (ndarray or Tensor, no gradient).
+    T^2 keeps the soft-target gradient scale independent of T.
+    """
+    t = teacher_logits.data if isinstance(teacher_logits, Tensor) else np.asarray(teacher_logits)
+    t = t.astype(student_logits.dtype) / student_logits.dtype.type(T)
+    log_pt = t - t.max(axis=1, keepdims=True)
+    log_pt = log_pt - np.log(np.exp(log_pt).sum(axis=1, keepdims=True))
+    log_ps = log_softmax(student_logits / float(T), axis=1)
+    kl = (Tensor(np.exp(log_pt)) * (Tensor(log_pt) - log_ps)).sum(axis=1).mean()
+    loss = kl * float(alpha * T * T)
+    if alpha < 1.0:
+        loss = loss + softmax_cross_entropy(student_logits, labels) * float(1.0 - alpha)
+    return loss

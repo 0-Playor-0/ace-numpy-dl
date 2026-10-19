@@ -1,0 +1,174 @@
+{
+  "phase": "6a",
+  "model": "E2",
+  "run_dir": "runs/cnn_e2_finder_cosine_20261019-160440",
+  "calib_seed": 4,
+  "n_calib": 2000,
+  "calibrators_tried": [
+    "p99.99"
+  ],
+  "folding": {
+    "max_abs_logit_diff": 2.288818359375e-05,
+    "pred_identical": true,
+    "val_acc_original": 0.9448333333333333,
+    "val_acc_folded": 0.9448333333333333
+  },
+  "float_val": {
+    "acc": 0.9448333333333333,
+    "acc_tta_logit_sum": 0.945,
+    "acc_tta_softmax_mean_phase3b": 0.945
+  },
+  "calibrators": {
+    "p99.99": {
+      "act_scales": [
+        0.015920098372331753,
+        0.05700463572825034,
+        0.04387499966959315,
+        0.03432071866012934,
+        0.04016006649948481,
+        0.03209524455032949
+      ],
+      "val_acc": 0.9435,
+      "val_acc_tta": 0.9446666666666667,
+      "fake_val_acc": 0.9435,
+      "fake_val_acc_tta": 0.9446666666666667,
+      "agree_int_vs_fake": 1.0,
+      "agree_int_vs_fake_tta": 1.0,
+      "agree_int_vs_float": 0.996,
+      "multiplier_range": [
+        0.00033832458056988815,
+        1.0
+      ],
+      "engine_s_12k_val_images": 37.510854957974516
+    }
+  },
+  "selected_calibrator": "p99.99",
+  "sensitivity": {
+    "conv1": {
+      "val_acc": 0.9446666666666667,
+      "drop": 0.0001666666666666483
+    },
+    "conv2": {
+      "val_acc": 0.9438333333333333,
+      "drop": 0.0010000000000000009
+    },
+    "conv3": {
+      "val_acc": 0.9446666666666667,
+      "drop": 0.0001666666666666483
+    },
+    "conv4": {
+      "val_acc": 0.9445,
+      "drop": 0.0003333333333332966
+    },
+    "fc1": {
+      "val_acc": 0.9448333333333333,
+      "drop": 0.0
+    },
+    "fc2": {
+      "val_acc": 0.9441666666666667,
+      "drop": 0.0006666666666665932
+    }
+  },
+  "shifted_val": {
+    "rotate": {
+      "n": 2020,
+      "int8": 0.9064356435643565,
+      "int8_tta": 0.9099009900990099,
+      "float": 0.9074257425742575,
+      "float_tta": 0.9094059405940594
+    },
+    "noise": {
+      "n": 2081,
+      "int8": 0.24843825084094184,
+      "int8_tta": 0.25564632388274866,
+      "float": 0.2522825564632388,
+      "float_tta": 0.26141278231619414
+    },
+    "brightness-mul": {
+      "n": 941,
+      "int8": 0.9373007438894793,
+      "int8_tta": 0.9330499468650372,
+      "float": 0.9362380446333688,
+      "float_tta": 0.9351753453772582
+    },
+    "brightness-add": {
+      "n": 958,
+      "int8": 0.8225469728601252,
+      "int8_tta": 0.8204592901878914,
+      "float": 0.8215031315240083,
+      "float_tta": 0.8162839248434238
+    }
+  },
+  "test": {
+    "calibrator": "p99.99",
+    "tta": true,
+    "test_acc": 0.9399,
+    "float_test_tta": 0.9403,
+    "drop": 0.00040000000000006697
+  },
+  "size": {
+    "file_bytes": 478154,
+    "file_kib": 466.947265625,
+    "payload_bytes": 470462,
+    "npz_overhead_bytes": 7692,
+    "layers": {
+      "conv1": {
+        "w": 288,
+        "b": 128,
+        "M0": 128,
+        "shift": 32,
+        "total": 576,
+        "float32_params_bytes": 1280
+      },
+      "conv2": {
+        "w": 9216,
+        "b": 128,
+        "M0": 128,
+        "shift": 32,
+        "total": 9504,
+        "float32_params_bytes": 36992
+      },
+      "conv3": {
+        "w": 18432,
+        "b": 256,
+        "M0": 256,
+        "shift": 64,
+        "total": 19008,
+        "float32_params_bytes": 73984
+      },
+      "conv4": {
+        "w": 36864,
+        "b": 256,
+        "M0": 256,
+        "shift": 64,
+        "total": 37440,
+        "float32_params_bytes": 147712
+      },
+      "fc1": {
+        "w": 401408,
+        "b": 512,
+        "M0": 512,
+        "shift": 128,
+        "total": 402560,
+        "float32_params_bytes": 1606144
+      },
+      "fc2": {
+        "w": 1280,
+        "b": 40,
+        "M0": 40,
+        "shift": 10,
+        "total": 1370,
+        "float32_params_bytes": 5160
+      }
+    },
+    "float32_kib": 1828.7,
+    "ratio_vs_float32": 3.916288057822375
+  },
+  "timing": {
+    "n": 10000,
+    "batch": 200,
+    "int8_s": 31.28179820801597,
+    "int8_ms_per_image": 3.128179820801597,
+    "float32_folded_numpy_s": 5.200351874984335
+  }
+}

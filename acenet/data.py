@@ -249,3 +249,34 @@ class DataLoader:
             idx = order[b * self.batch_size:(b + 1) * self.batch_size]
             xb = self.X[idx]
             yield (xb if self.transform is None else self.transform(xb, self.rng)), self.y[idx]
+
+
+class CacheLoader:
+    """Minibatches from a cache of K pre-augmented copies of a training set.
+
+    images (K, N, C, H, W) (any float dtype, e.g. float16; batches are returned as float32),
+    labels (N,), teacher (K, N, classes) or None. Each epoch draws one copy k ~ U{0..K-1} per sample,
+    then a fresh permutation; an epoch is N samples. Yields (x, y) or (x, y, teacher_logits).
+    """
+
+    def __init__(self, images, labels, batch_size, rng, teacher=None):
+        if images.shape[1] != labels.shape[0]:
+            raise ValueError("images and labels have different lengths")
+        self.images, self.labels, self.teacher = images, labels, teacher
+        self.batch_size, self.rng = batch_size, rng
+
+    def __len__(self):
+        return -(-self.labels.shape[0] // self.batch_size)
+
+    def __iter__(self):
+        K, n = self.images.shape[:2]
+        copy = self.rng.integers(0, K, n)
+        order = self.rng.permutation(n)
+        for b in range(len(self)):
+            idx = order[b * self.batch_size:(b + 1) * self.batch_size]
+            k = copy[idx]
+            x = self.images[k, idx].astype(np.float32)
+            if self.teacher is None:
+                yield x, self.labels[idx]
+            else:
+                yield x, self.labels[idx], self.teacher[k, idx]

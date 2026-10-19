@@ -1,0 +1,673 @@
+{
+  "candidates": {
+    "P": {
+      "description": "plain conv 16-24 | 48 | 64, GAP, fc",
+      "params_trainable": 42570,
+      "params_folded": 42418,
+      "int8_weights_bytes": 42256,
+      "per_channel_bytes": 1458,
+      "header_bytes": 56,
+      "int8_file_bytes": 43770,
+      "macs_per_image": 6209920
+    },
+    "DS": {
+      "description": "stem 32, DS 48 | DS 96, DS 96 | DS 192, GAP, fc",
+      "params_trainable": 39930,
+      "params_folded": 39194,
+      "int8_weights_bytes": 38448,
+      "per_channel_bytes": 6714,
+      "header_bytes": 101,
+      "int8_file_bytes": 45263,
+      "macs_per_image": 5566752
+    },
+    "H": {
+      "description": "plain 24-32 @28 | DS 64, DS 128 | DS 160, GAP, fc",
+      "params_trainable": 42738,
+      "params_folded": 42106,
+      "int8_weights_bytes": 41464,
+      "per_channel_bytes": 5778,
+      "header_bytes": 92,
+      "int8_file_bytes": 47334,
+      "macs_per_image": 8826304
+    }
+  },
+  "cache": {
+    "K": 4,
+    "n": 54000,
+    "seed": 21,
+    "teacher": "E2",
+    "teacher_run": "runs/cnn_e2_finder_cosine_20261019-160440",
+    "augmentation": "crop pad 2 (black fill) + hflip 0.5 + random erasing (p 0.5, area 0.02-0.2, N(0,1)); no shift aug",
+    "images_dtype": "float16",
+    "logits_dtype": "float32",
+    "logits_on": "the stored float16 images, eval mode",
+    "build_s": 195.8664503339678,
+    "augment_s": 1.870723501779139,
+    "teacher_forward_s": 193.99572683218867,
+    "files_bytes": {
+      "images.npy": 338688128,
+      "logits.npy": 8640128,
+      "labels.npy": 432128
+    },
+    "total_mb": 331.650146484375,
+    "teacher_train_acc_on_copies": [
+      0.8738148148148148,
+      0.877462962962963,
+      0.8724259259259259,
+      0.8735925925925926
+    ]
+  },
+  "speed": {
+    "P": {
+      "ms_per_batch_fwd_bwd": 154.07716698246077,
+      "val_eval_s": 3.0599598750122823,
+      "projected_s_per_epoch": 68.08052434161073
+    },
+    "DS": {
+      "ms_per_batch_fwd_bwd": 454.07829101895913,
+      "val_eval_s": 9.880182749941014,
+      "projected_s_per_epoch": 201.50122155994177
+    },
+    "H": {
+      "ms_per_batch_fwd_bwd": 352.80529101146385,
+      "val_eval_s": 9.454695501015522,
+      "projected_s_per_epoch": 158.33852830785327
+    }
+  },
+  "screen": {
+    "P": {
+      "finder": {
+        "steps": 422,
+        "stop_reason": "max_lr",
+        "min_loss_lr": 0.5724264790639666,
+        "min_smoothed_loss": 0.891084800400334,
+        "suggested_min_div10": 0.05724264790639666,
+        "suggested_steepest": 0.0010854990649320614,
+        "wall_time_s": 64.29726379102794
+      },
+      "run_name": "student_screen_P",
+      "status": "ok",
+      "best_epoch": 10,
+      "best_val_acc": 0.9261666666666667,
+      "best_val_loss": 0.2029458577434222,
+      "wall_time_s": 673.8542591250152,
+      "run_dir": "runs/student_screen_P_20261019-181902",
+      "student": "P",
+      "lr": 0.05724264790639666,
+      "epochs": 10,
+      "kd": null,
+      "s_per_epoch": 67.38542591250152
+    },
+    "DS": {
+      "finder": {
+        "steps": 422,
+        "stop_reason": "max_lr",
+        "min_loss_lr": 0.14425965628906817,
+        "min_smoothed_loss": 0.8745464634716696,
+        "suggested_min_div10": 0.014425965628906818,
+        "suggested_steepest": 0.0029052459060016455,
+        "wall_time_s": 216.73463870800333
+      },
+      "run_name": "student_screen_DS",
+      "status": "ok",
+      "best_epoch": 9,
+      "best_val_acc": 0.9268333333333333,
+      "best_val_loss": 0.19856090570489565,
+      "wall_time_s": 2148.8320689160028,
+      "run_dir": "runs/student_screen_DS_20261019-183354",
+      "student": "DS",
+      "lr": 0.014425965628906818,
+      "epochs": 10,
+      "kd": null,
+      "s_per_epoch": 214.88320689160028
+    },
+    "H": {
+      "finder": {
+        "steps": 422,
+        "stop_reason": "max_lr",
+        "min_loss_lr": 0.2210131183646297,
+        "min_smoothed_loss": 0.8599434575105139,
+        "suggested_min_div10": 0.02210131183646297,
+        "suggested_steepest": 0.0030021658419764467,
+        "wall_time_s": 163.8636471250211
+      },
+      "run_name": "student_screen_H",
+      "status": "ok",
+      "best_epoch": 10,
+      "best_val_acc": 0.9255,
+      "best_val_loss": 0.19986810584863027,
+      "wall_time_s": 1678.6683304170147,
+      "run_dir": "runs/student_screen_H_20261019-191227",
+      "student": "H",
+      "lr": 0.02210131183646297,
+      "epochs": 10,
+      "kd": null,
+      "s_per_epoch": 167.86683304170145
+    }
+  },
+  "selected_student_arch": {
+    "id": "P",
+    "rule": "P if val within 0.3 pt of the best, else max val (10-ep CE screen)",
+    "val": {
+      "P": 0.9261666666666667,
+      "DS": 0.9268333333333333,
+      "H": 0.9255
+    },
+    "best_by_val": "DS",
+    "old_rule_pick": "DS",
+    "screen_s_per_epoch": 67.38542591250152,
+    "student_epochs": 40,
+    "epoch_rule": "30 if screen s/epoch > 120 else 40"
+  },
+  "cache_cropflip": {
+    "K": 4,
+    "n": 54000,
+    "seed": 21,
+    "teacher": "E2",
+    "teacher_run": "runs/cnn_e2_finder_cosine_20261019-160440",
+    "augmentation": "crop pad 2 (black fill) + hflip 0.5; no shift aug",
+    "dir": "data/kd_cache_cropflip",
+    "images_dtype": "float16",
+    "logits_dtype": "float32",
+    "logits_on": "the stored float16 images, eval mode",
+    "build_s": 185.6055904160021,
+    "augment_s": 0.6250786713790148,
+    "teacher_forward_s": 184.98051174462307,
+    "files_bytes": {
+      "images.npy": 338688128,
+      "logits.npy": 8640128,
+      "labels.npy": 432128
+    },
+    "total_mb": 331.650146484375,
+    "teacher_train_acc_on_copies": [
+      0.953037037037037,
+      0.9536111111111111,
+      0.9530740740740741,
+      0.953
+    ]
+  },
+  "students": {
+    "S0": {
+      "run_name": "student_S0",
+      "status": "ok",
+      "best_epoch": 36,
+      "best_val_acc": 0.932,
+      "best_val_loss": 0.20333520993590354,
+      "wall_time_s": 2883.94377545896,
+      "run_dir": "runs/student_S0_20261019-194400",
+      "student": "P",
+      "lr": 0.05724264790639666,
+      "epochs": 40,
+      "kd": null,
+      "s_per_epoch": 72.09859438647399
+    },
+    "S1": {
+      "run_name": "student_S1",
+      "status": "ok",
+      "best_epoch": 40,
+      "best_val_acc": 0.9321666666666667,
+      "best_val_loss": 0.18173794324199358,
+      "wall_time_s": 3057.6972235409776,
+      "run_dir": "runs/student_S1_20261019-203206",
+      "student": "P",
+      "lr": 0.05724264790639666,
+      "epochs": 40,
+      "kd": [
+        4.0,
+        0.9
+      ],
+      "s_per_epoch": 76.44243058852445
+    }
+  },
+  "quant": {
+    "S1": {
+      "file": "runs/student_S1_int8.ace8",
+      "file_bytes": 43770,
+      "budget": 50000,
+      "act_scales": [
+        0.015920098372331753,
+        0.11149923069270577,
+        0.10151872860165093,
+        0.08327938440277821,
+        0.0743407677477739
+      ],
+      "fold_max_abs_logit_diff": 1.71661376953125e-05,
+      "val_acc": 0.928,
+      "val_acc_tta": 0.9323333333333333,
+      "fake_val_acc": 0.928,
+      "agree_int_vs_fake": 1.0,
+      "agree_int_vs_float": 0.984,
+      "shifted_val_acc": {
+        "rotate": 0.8920792079207921,
+        "noise": 0.20999519461797214,
+        "brightness-mul": 0.926673751328374,
+        "brightness-add": 0.7463465553235908
+      },
+      "shifted_val_acc_tta": {
+        "rotate": 0.9024752475247525,
+        "noise": 0.21960595867371457,
+        "brightness-mul": 0.926673751328374,
+        "brightness-add": 0.7567849686847599
+      },
+      "shifted_val_acc_all": 0.6376666666666667,
+      "shifted_val_acc_all_tta": 0.6461666666666667
+    },
+    "S0": {
+      "file": "runs/student_S0_int8.ace8",
+      "file_bytes": 43770,
+      "budget": 50000,
+      "act_scales": [
+        0.015920098372331753,
+        0.14947888231652928,
+        0.12715183468315544,
+        0.11505052611583799,
+        0.09839602342740757
+      ],
+      "fold_max_abs_logit_diff": 3.4332275390625e-05,
+      "val_acc": 0.9266666666666666,
+      "val_acc_tta": 0.9336666666666666,
+      "fake_val_acc": 0.9266666666666666,
+      "agree_int_vs_fake": 1.0,
+      "agree_int_vs_float": 0.9806666666666667,
+      "shifted_val_acc": {
+        "rotate": 0.8722772277227723,
+        "noise": 0.24171071600192215,
+        "brightness-mul": 0.9181721572794899,
+        "brightness-add": 0.6659707724425887
+      },
+      "shifted_val_acc_tta": {
+        "rotate": 0.8886138613861386,
+        "noise": 0.23450264296011533,
+        "brightness-mul": 0.9309245483528161,
+        "brightness-add": 0.6931106471816284
+      },
+      "shifted_val_acc_all": 0.6278333333333334,
+      "shifted_val_acc_all_tta": 0.6371666666666667,
+      "float_test": 0.9304,
+      "int8_test": 0.9281
+    }
+  },
+  "s2_decision": {
+    "S1_int8_val_tta": 0.9323333333333333,
+    "gate": 0.9249999999999999,
+    "run_S2": false,
+    "rule": "train S2 iff S1 int8 val+TTA < E2 val+TTA 0.9450 - 2.0 pt"
+  },
+  "final": {
+    "rows": {
+      "S0": {
+        "id": "S0",
+        "run_dir": "runs/student_S0_20261019-194400",
+        "kd": null,
+        "best_epoch": 36,
+        "wall_time_s": 2883.94377545896,
+        "val_acc": 0.932,
+        "val_acc_tta": 0.9366666666666666,
+        "val_nll": 0.20333522063266662,
+        "ece": 0.021238813178265138,
+        "ece_tta": 0.011285808176847562,
+        "per_class_val_acc_tta": {
+          "T-shirt/top": 0.8747993579454254,
+          "Trouser": 0.9802306425041186,
+          "Pullover": 0.8909710391822828,
+          "Dress": 0.9447322970639033,
+          "Coat": 0.9326599326599326,
+          "Sandal": 0.9916805324459235,
+          "Shirt": 0.8156996587030717,
+          "Sneaker": 0.9696485623003195,
+          "Bag": 0.9899159663865547,
+          "Ankle boot": 0.973421926910299
+        },
+        "confusion_val_tta": [
+          [
+            545,
+            0,
+            13,
+            6,
+            0,
+            0,
+            59,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            595,
+            0,
+            11,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          [
+            6,
+            0,
+            523,
+            6,
+            34,
+            0,
+            18,
+            0,
+            0,
+            0
+          ],
+          [
+            7,
+            1,
+            4,
+            547,
+            10,
+            0,
+            10,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            14,
+            8,
+            554,
+            0,
+            16,
+            0,
+            2,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            596,
+            0,
+            4,
+            0,
+            1
+          ],
+          [
+            35,
+            1,
+            25,
+            13,
+            33,
+            0,
+            478,
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            607,
+            0,
+            17
+          ],
+          [
+            1,
+            0,
+            1,
+            1,
+            0,
+            2,
+            1,
+            0,
+            589,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            11,
+            2,
+            586
+          ]
+        ],
+        "shifted_val_acc": {
+          "rotate": 0.8722772277227723,
+          "noise": 0.23546371936568958,
+          "brightness-mul": 0.922422954303932,
+          "brightness-add": 0.6889352818371608
+        },
+        "shifted_val_acc_tta": {
+          "rotate": 0.8856435643564357,
+          "noise": 0.23065833733781835,
+          "brightness-mul": 0.9309245483528161,
+          "brightness-add": 0.7014613778705637
+        },
+        "shifted_val_acc_all": 0.63,
+        "shifted_val_acc_all_tta": 0.6361666666666667
+      },
+      "S1": {
+        "id": "S1",
+        "run_dir": "runs/student_S1_20261019-203206",
+        "kd": [
+          4.0,
+          0.9
+        ],
+        "best_epoch": 40,
+        "wall_time_s": 3057.6972235409776,
+        "val_acc": 0.9321666666666667,
+        "val_acc_tta": 0.9336666666666666,
+        "val_nll": 0.18173795672529258,
+        "ece": 0.014672547204355157,
+        "ece_tta": 0.012322781619984284,
+        "per_class_val_acc_tta": {
+          "T-shirt/top": 0.8876404494382022,
+          "Trouser": 0.9785831960461285,
+          "Pullover": 0.8773424190800682,
+          "Dress": 0.9516407599309153,
+          "Coat": 0.8956228956228957,
+          "Sandal": 0.9833610648918469,
+          "Shirt": 0.7986348122866894,
+          "Sneaker": 0.9824281150159745,
+          "Bag": 0.9966386554621849,
+          "Ankle boot": 0.9800664451827242
+        },
+        "confusion_val_tta": [
+          [
+            553,
+            0,
+            10,
+            8,
+            1,
+            0,
+            51,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            594,
+            0,
+            12,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            9,
+            1,
+            515,
+            8,
+            37,
+            0,
+            17,
+            0,
+            0,
+            0
+          ],
+          [
+            9,
+            0,
+            1,
+            551,
+            9,
+            0,
+            9,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            21,
+            19,
+            532,
+            0,
+            21,
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            591,
+            0,
+            6,
+            0,
+            4
+          ],
+          [
+            46,
+            0,
+            25,
+            12,
+            34,
+            0,
+            468,
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            615,
+            0,
+            9
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            593,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            9,
+            1,
+            590
+          ]
+        ],
+        "shifted_val_acc": {
+          "rotate": 0.8955445544554456,
+          "noise": 0.20855358000961077,
+          "brightness-mul": 0.9256110520722636,
+          "brightness-add": 0.7400835073068893
+        },
+        "shifted_val_acc_tta": {
+          "rotate": 0.903960396039604,
+          "noise": 0.21960595867371457,
+          "brightness-mul": 0.9256110520722636,
+          "brightness-add": 0.7536534446764092
+        },
+        "shifted_val_acc_all": 0.6371666666666667,
+        "shifted_val_acc_all_tta": 0.646
+      }
+    },
+    "selected": "S0",
+    "int8_val_acc_tta": {
+      "S0": 0.9336666666666666,
+      "S1": 0.9323333333333333
+    },
+    "rule": "max INT8 val acc with flip TTA (logit sum) over trained S runs; ties -> S0, S1, S2",
+    "int8": {
+      "file": "runs/student_S0_int8.ace8",
+      "file_bytes": 43770,
+      "budget": 50000,
+      "act_scales": [
+        0.015920098372331753,
+        0.14947888231652928,
+        0.12715183468315544,
+        0.11505052611583799,
+        0.09839602342740757
+      ],
+      "fold_max_abs_logit_diff": 3.4332275390625e-05,
+      "val_acc": 0.9266666666666666,
+      "val_acc_tta": 0.9336666666666666,
+      "fake_val_acc": 0.9266666666666666,
+      "agree_int_vs_fake": 1.0,
+      "agree_int_vs_float": 0.9806666666666667,
+      "shifted_val_acc": {
+        "rotate": 0.8722772277227723,
+        "noise": 0.24171071600192215,
+        "brightness-mul": 0.9181721572794899,
+        "brightness-add": 0.6659707724425887
+      },
+      "shifted_val_acc_tta": {
+        "rotate": 0.8886138613861386,
+        "noise": 0.23450264296011533,
+        "brightness-mul": 0.9309245483528161,
+        "brightness-add": 0.6931106471816284
+      },
+      "shifted_val_acc_all": 0.6278333333333334,
+      "shifted_val_acc_all_tta": 0.6371666666666667,
+      "float_test": 0.9304,
+      "int8_test": 0.9281
+    },
+    "test": {
+      "float": 0.9304,
+      "int8": 0.9281,
+      "E2_float": 0.9403,
+      "E2_int8": 0.9399,
+      "int8_minus_E2_float_pt": -1.2199999999999989,
+      "int8_minus_E2_int8_pt": -1.1799999999999922,
+      "criterion": "student int8 test >= E2 float test - 2.0 pt",
+      "pass": true
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "run_name": "student_screen_DS",
+  "run_dir": "runs/student_screen_DS_20261019-183354",
+  "status": "ok",
+  "diverged_at": null,
+  "epochs_run": 10,
+  "best_epoch": 9,
+  "best_val_acc": 0.9268333333333333,
+  "best_val_loss": 0.19856090570489565,
+  "wall_time_s": 2148.8320689160028
+}

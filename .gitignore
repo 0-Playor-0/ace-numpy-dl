@@ -9,3 +9,4 @@ CLAUDE.md
 data/shifted_val.npz
 runs/**/*.npz
 data/hidden_selftest/
+data/kd_cache*/
