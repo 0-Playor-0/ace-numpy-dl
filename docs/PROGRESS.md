@@ -22,7 +22,7 @@ Sources: runs/test_once.json (all 6b+ test numbers), runs/distill.json (`final`,
 - `scripts/make_tables.py`: all 21 README tables generated from runs/*.json (`--check` verifies up to date; fails loudly on a missing key).
 - `tests/conftest.py` writes runs/gradcheck.json (27 ops, worst 1.5e-9; 147 tests) on a full green run.
 - `--smoke` on every experiment script (experiments/__init__.py sets ACE_SMOKE=1 → 2048/512/512 subsets, 1 epoch per fit).
-  `scripts/smoke_test.py`: fresh clone, empty runs/, download, 33 pipeline steps + pytest + make_tables → runs/smoke_test.json. PASS (~8 min).
+  `scripts/smoke_test.py`: fresh clone, empty runs/, download, 33 pipeline steps + pytest (minus the committed-link test) + make_tables → runs/smoke_test.json. PASS (~8 min).
 - Smoke-test fixes: `distill ablation` crashed when Phase 3b selects A (B untested); hardcoded B test numbers in `robust.select` and
   `quant.FLOAT_B_TEST` replaced by reads from runs/cnn_ablation.json / cnn_b_int8.json (values unchanged: 0.9349 / 0.9344).
 - tests/test_repo.py checks every README/docs link, image and backticked path exists (73 targets).

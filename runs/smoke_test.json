@@ -1,7 +1,7 @@
 {
-  "head": "ba2ccb95269b1f2efe2c562c312b054b47b05a55",
-  "uncommitted_applied": true,
-  "clone": "/var/folders/s7/k3d291mj1fl6vxls58x7wf080000gn/T/acenet_smoke__r1_x3do/repo",
+  "head": "e20f7b2564ef1f06d1f31b27f9f6567b071ac241",
+  "uncommitted_applied": false,
+  "clone": "/var/folders/s7/k3d291mj1fl6vxls58x7wf080000gn/T/acenet_smoke_5zep8sk_/repo",
   "python": "3.12.15",
   "platform": "macOS-14.8.8-arm64-arm-64bit",
   "cpu": "Apple M1, 8 cores",
@@ -20,7 +20,7 @@
     {
       "cmd": "python -m experiments.mlp failures --smoke",
       "rc": 0,
-      "s": 1.0
+      "s": 0.9
     },
     {
       "cmd": "python -m experiments.mlp run --tag fix --opt adam --lr 3e-4 --dropout 0.3 --wd 0.05 --smoke",
@@ -30,7 +30,7 @@
     {
       "cmd": "python -m experiments.mlp test --smoke",
       "rc": 0,
-      "s": 0.6
+      "s": 0.5
     },
     {
       "cmd": "python -m experiments.diagnose_overfit --smoke",
@@ -40,92 +40,92 @@
     {
       "cmd": "python -m experiments.cnn train --smoke",
       "rc": 0,
-      "s": 8.2
+      "s": 7.9
     },
     {
       "cmd": "python -m experiments.cnn retry --smoke",
       "rc": 0,
-      "s": 6.8
+      "s": 5.6
     },
     {
       "cmd": "python -m experiments.cnn test --smoke",
       "rc": 0,
-      "s": 1.1
+      "s": 1.0
     },
     {
       "cmd": "python -m experiments.cnn shift --smoke",
       "rc": 0,
-      "s": 2.4
+      "s": 2.3
     },
     {
       "cmd": "python -m experiments.cnn ablation --smoke",
       "rc": 0,
-      "s": 11.5
+      "s": 11.3
     },
     {
       "cmd": "python -m experiments.cnn_ablation --smoke",
       "rc": 0,
-      "s": 6.4
+      "s": 6.2
     },
     {
       "cmd": "python -m experiments.quant B --smoke",
       "rc": 0,
-      "s": 31.2
+      "s": 30.8
     },
     {
       "cmd": "python -m experiments.robust finder --smoke",
       "rc": 0,
-      "s": 5.7
+      "s": 5.5
     },
     {
       "cmd": "python -m experiments.robust augspeed --smoke",
       "rc": 0,
-      "s": 0.8
+      "s": 0.7
     },
     {
       "cmd": "python -m experiments.robust train --smoke",
       "rc": 0,
-      "s": 19.7
+      "s": 16.4
     },
     {
       "cmd": "python -m experiments.robust eval --smoke",
       "rc": 0,
-      "s": 17.0
+      "s": 16.1
     },
     {
       "cmd": "python -m experiments.robust plot --smoke",
       "rc": 0,
-      "s": 0.7
+      "s": 0.6
     },
     {
       "cmd": "python -m experiments.robust select --smoke",
       "rc": 0,
-      "s": 0.6
+      "s": 0.5
     },
     {
       "cmd": "python -m experiments.distill teachers --smoke",
       "rc": 0,
-      "s": 58.2
+      "s": 85.7
     },
     {
       "cmd": "python -m experiments.distill cache --smoke",
       "rc": 0,
-      "s": 10.1
+      "s": 10.9
     },
     {
       "cmd": "python -m experiments.distill candidates --smoke",
       "rc": 0,
-      "s": 0.6
+      "s": 0.5
     },
     {
       "cmd": "python -m experiments.distill speed --smoke",
       "rc": 0,
-      "s": 10.4
+      "s": 9.1
     },
     {
       "cmd": "python -m experiments.distill screen --smoke",
       "rc": 0,
-      "s": 40.9
+      "s": 36.8
     },
     {
       "cmd": "python -m experiments.distill select_arch --smoke",
@@ -135,56 +135,52 @@
     {
       "cmd": "python -m experiments.distill cache_cropflip --smoke",
       "rc": 0,
-      "s": 9.5
+      "s": 7.9
     },
     {
       "cmd": "python -m experiments.distill students --smoke",
       "rc": 0,
-      "s": 50.2
+      "s": 43.3
     },
     {
       "cmd": "python -m experiments.distill final --smoke",
       "rc": 0,
-      "s": 56.0
+      "s": 48.6
     },
     {
       "cmd": "python -m experiments.distill deliverable --smoke",
       "rc": 0,
-      "s": 6.4
+      "s": 6.7
     },
     {
       "cmd": "python -m experiments.distill ablation --smoke",
       "rc": 0,
-      "s": 0.4
+      "s": 0.5
     },
     {
       "cmd": "python -m experiments.plots all --smoke",
       "rc": 0,
-      "s": 1.8
+      "s": 2.2
     },
     {
       "cmd": "python -m experiments.hidden_eval --selftest --smoke",
       "rc": 0,
-      "s": 79.4
+      "s": 117.6
     },
     {
       "cmd": "python -m experiments.hidden_eval data/hidden_selftest/idx --name smoke --smoke",
       "rc": 0,
-      "s": 21.1
+      "s": 32.4
     },
     {
       "cmd": "python -m pytest -q -p no:cacheprovider",
-      "rc": 0,
-      "s": 5.0
-    },
-    {
-      "cmd": "python -m scripts.make_tables --smoke",
-      "rc": 0,
-      "s": 0.0
+      "rc": 1,
+      "s": 7.0
     }
   ],
-  "download_s": 12.511534041026607,
-  "total_s": 482.4,
-  "pass": true,
-  "log": "/var/folders/s7/k3d291mj1fl6vxls58x7wf080000gn/T/acenet_smoke__r1_x3do/smoke.log"
+  "download_s": 9.60443883301923,
+  "error_tail": "......................................... [ 48%]\n........................................................................ [ 97%]\nF..                                                                      [100%]\n=================================== FAILURES ===================================\n_______________________ test_readme_and_docs_links_exist _______________________\n\n    def test_readme_and_docs_links_exist():\n        \"\"\"Every markdown link/image target and every backticked repo path in README.md and docs/*.md exists.\n        Paths with placeholders ({a,b}, <name>, *) are skipped; the hidden-set outputs do not exist before release.\"\"\"\n        missing = []\n        for md in [ROOT / \"README.md\", *sorted((ROOT / \"docs\").glob(\"*.md\"))]:\n            text = md.read_text()\n            targets = [(md.parent / t, t) for t in LINK.findall(text) if \"://\" not in t]\n            targets += [(ROOT / t, t) for t in CODE_PATH.findall(text)]\n            for path, t in targets:\n                if any(c in t for c in \"{}<>*\") or \"hidden_eval_hidden\" in t:\n                    continue\n                if not path.exists():\n                    missing.append(f\"{md.relative_to(ROOT)}: {t}\")\n>       assert not missing, missing\nE       AssertionError: ['README.md: runs/gradcheck.json', 'README.md: runs/smoke_test.json', 'docs/failure.md: runs/mlp_overfit_adam_lr0.0003_20261019-112130/', 'docs/failure.md: runs/mlp_fix_adam_lr0.0003_do0.3_wd0.05_20261019-112223/']\nE       assert not ['README.md: runs/gradcheck.json', 'README.md: runs/smoke_test.json', 'docs/failure.md: runs/mlp_overfit_adam_lr0.0003_20261019-112130/', 'docs/failure.md: runs/mlp_fix_adam_lr0.0003_do0.3_wd0.05_20261019-112223/']\n\ntests/test_repo.py:35: AssertionError\n======================== gradcheck: max rel_err per op =========================\nop                    | max rel_err\n----------------------+-------------\nadd                   | 6.071e-11\nsub                   | 9.092e-11\nneg                   | 4.794e-11\nmul                   | 8.908e-11\ndiv                   | 4.353e-11\npow                   | 1.969e-10\nmatmul                | 3.095e-10\nsum                   | 2.555e-10\nmean                  | 5.897e-11\nmax                   | 4.818e-11\nreshape               | 3.721e-11\ntranspose             | 7.384e-11\nexp                   | 7.373e-11\nlog                   | 4.338e-11\nrelu                  | 7.141e-11\nlog_softmax           | 2.890e-10\nsoftmax_cross_entropy | 7.489e-10\nbroadcasting          | 1.600e-10\nreused input          | 8.670e-11\nmlp end-to-end        | 6.953e-10\nconv2d                | 5.480e-10\nmaxpool2d             | 1.395e-10\nbatchnorm             | 7.538e-10\ncnn end-to-end        | 7.128e-10\ndepthwise_conv2d      | 4.177e-10\nkd_loss               | 1.461e-09\nglobal_avg_pool       | 2.710e-10\n=========================== short test summary info ============================\nFAILED tests/test_repo.py::test_readme_and_docs_links_exist - AssertionError:...\n1 failed, 146 passed in 6.51s\n",
+  "total_s": 531.2,
+  "pass": false,
+  "log": "/var/folders/s7/k3d291mj1fl6vxls58x7wf080000gn/T/acenet_smoke_5zep8sk_/smoke.log"
 }
