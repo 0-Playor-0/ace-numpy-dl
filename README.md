@@ -1,4 +1,4 @@
-# ACE-Net: a pure-NumPy deep learning stack (Team ACE, Option A)
+# Team ACE Recruitment 2026, AI/ML + CV Option A, Ojas Kulkarni (26BCE2193)
 
 ACE-Net is a from-scratch deep learning stack written only in NumPy. It has a `Tensor` with reverse-mode autograd, layers, losses, optimizers, a training loop with run logging, an int8 post-training quantizer with an integer-only inference engine, distribution-shift tooling and knowledge distillation. Everything is trained and evaluated on Fashion-MNIST. There is no AD library, no scipy and no sklearn (`tests/test_repo.py` enforces this). Every number in the tables below is generated from `runs/*.json` by `python -m scripts.make_tables`, so the README cannot drift from the logged runs. The val split (6,000 images, seed 0) is used for every decision. Each final model sees the test set once.
 
