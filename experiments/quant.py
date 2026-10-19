@@ -29,7 +29,12 @@ NPZ = os.path.join(RUNS_DIR, "cnn_b_int8.npz")
 CALIB_SEED = 4   # picks the 2,000 calibration images from the train split
 N_CALIB = 2000
 N_TIME = 10_000
-FLOAT_B_TEST = 0.9349
+
+
+def b_float_test():
+    """B's float flip-TTA test accuracy from runs/cnn_ablation.json (None if Phase 3b did not test B)."""
+    t = json.load(open(os.path.join(RUNS_DIR, "cnn_ablation.json"))).get("test")
+    return t["test_acc"] if t and t["id"] == "B" else None
 
 
 def acc(z, y):
@@ -47,9 +52,11 @@ def paths(model_id):
     return stem + ".json", stem + ".npz"
 
 
-def main(model_id="B", float_test=FLOAT_B_TEST, calibrators=CALIBRATORS):
+def main(model_id="B", float_test=None, calibrators=CALIBRATORS):
     """float_test: the model's float flip-TTA test accuracy (already evaluated once) for the drop.
     calibrators: candidates; Phase 6a passes ("p99.99",) only (fixed from Phase 4)."""
+    if float_test is None and model_id == "B":
+        float_test = b_float_test()
     out_path, npz_path = paths(model_id)
     previous = json.load(open(out_path)) if os.path.exists(out_path) else {}
     data = load_data()
@@ -134,7 +141,7 @@ def main(model_id="B", float_test=FLOAT_B_TEST, calibrators=CALIBRATORS):
         zt = qm.logits(data["X_test"], flip=True)
         ta = acc(zt, data["y_test"])
         test = {"calibrator": sel, "tta": True, "test_acc": ta, "float_test_tta": float_test,
-                "drop": float_test - ta}
+                "drop": None if float_test is None else float_test - ta}
         print("TEST (once)", test)
     res["test"] = test
     with open(out_path, "w") as f:  # persist the test result (and its guard) immediately

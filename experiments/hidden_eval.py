@@ -1,4 +1,8 @@
-"""Evaluate the final model (float + int8, flip TTA) on a hidden Fashion-MNIST-style set.
+"""Evaluate every declared model (float + int8 where applicable, flip TTA) on a hidden Fashion-MNIST-style set.
+
+Models (pre-registered: E2/B/D in commit 693f9c2, S0/S1 int8 in commit ba2ccb9):
+  E2, B, D   float32 checkpoint (softmax-mean TTA) and int8 npz (int32 logit-sum TTA)
+  S0, S1     int8 compact .ace8 student files (logit-sum TTA)
 
 Input formats (auto-detected):
   .npz          image array under X/x/images/x_test/X_test/data (else the largest >=3-D array),
@@ -9,12 +13,13 @@ Input formats (auto-detected):
 Images of any size / channel count are converted to 28x28 grayscale in [0, 1] (every conversion is
 logged): RGB(A) -> luminance (alpha premultiplied), area resize when shrinking, bilinear when
 growing, and polarity inversion when the border is bright (FMNIST is light-on-black).
-Inputs are standardized with the train-split mean/std from runs/final_model.json.
+Inputs are standardized with the train-split mean/std from runs/final_model.json (shared by all models).
 
 Usage:
   python -m experiments.hidden_eval PATH [--labels PATH] [--name NAME] [--invert auto|yes|no]
   python -m experiments.hidden_eval --selftest   # shifted_val saved as npz / idx.gz / PNGs
-Writes runs/hidden_eval_<name>.json (+ _confusion.png, _predictions.csv).
+Writes runs/hidden_eval_<name>.json, _per_class.md, _predictions.csv, _confusion.png and _vs_test.png
+(clean test vs hidden, per model).
 """
 
 import argparse
@@ -33,6 +38,9 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RUNS_DIR = os.path.join(ROOT, "runs")
 FINAL = os.path.join(RUNS_DIR, "final_model.json")
+TEST_ONCE = os.path.join(RUNS_DIR, "test_once.json")
+TEACHERS = ("E2", "B", "D")
+STUDENTS = ("S0", "S1")
 SELFTEST_DIR = os.path.join(ROOT, "data", "hidden_selftest")
 CLASS_NAMES = ["T-shirt/top", "Trouser", "Pullover", "Dress", "Coat",
                "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot"]
@@ -347,27 +355,42 @@ def load_any(path, labels=None, invert="auto"):
 
 # ---------------------------------------------------------------- evaluation
 
-def load_final():
+def model_specs():
+    """[(key, kind, loader, clean test acc)] for the declared models, in report order."""
     from acenet.quant import Int8Model
-    from experiments.cnn import RUN_SEED, build_model
-    from acenet.train import load_checkpoint
-    with open(FINAL) as f:
-        cfg = json.load(f)
-    model = build_model(np.random.default_rng(RUN_SEED))
-    load_checkpoint(model, os.path.join(ROOT, cfg["checkpoint"]))
-    return cfg, model, Int8Model.load(os.path.join(ROOT, cfg["int8"]))
+    from experiments.cnn_ablation import entry, load_model
+    final = json.load(open(FINAL))
+    tests = json.load(open(TEST_ONCE))
+    test = {"B": final["test_float_tta"], "B int8": final["test_int8_tta"],
+            **{r: tests[f"{r}_float"]["test_acc"] for r in ("E2", "D")},
+            **{f"{r} int8": tests[f"{r}_int8"]["test_acc"] for r in ("E2", "D")},
+            **{f"{s} int8": tests[f"student_{s}_int8"]["test_acc"] for s in STUDENTS}}
+    specs = []
+    for rid in TEACHERS:
+        specs.append((rid, "float", lambda rid=rid: load_model(entry(rid)), test[rid]))
+        specs.append((f"{rid} int8", "int8", lambda rid=rid: Int8Model.load(
+            os.path.join(RUNS_DIR, f"cnn_{rid.lower()}_int8.npz")), test[f"{rid} int8"]))
+    for sid in STUDENTS:
+        specs.append((f"{sid} int8", "int8", lambda sid=sid: Int8Model.load_compact(
+            os.path.join(RUNS_DIR, f"student_{sid}_int8.ace8")), test[f"{sid} int8"]))
+    return specs
 
 
-def run_models(X01, cfg, model, qm):
+def load_models():
+    cfg = json.load(open(FINAL))
+    return cfg, [(k, kind, fn(), t) for k, kind, fn, t in model_specs()]
+
+
+def run_models(X01, cfg, models):
+    """{model key: TTA predictions}, {model key: seconds}."""
     from experiments.cnn_ablation import predict
     X = ((X01 - np.float32(cfg["mean"])) / np.float32(cfg["std"])).astype(np.float32)[:, None]
-    t0 = time.perf_counter()
-    pf = predict(model, X)[1].argmax(1)
-    tf = time.perf_counter() - t0
-    t0 = time.perf_counter()
-    pq = qm.logits(X, flip=True).argmax(1)
-    tq = time.perf_counter() - t0
-    return pf, pq, {"float_s": tf, "int8_s": tq}
+    preds, timing = {}, {}
+    for key, kind, m, _ in models:
+        t0 = time.perf_counter()
+        preds[key] = predict(m, X)[1].argmax(1) if kind == "float" else m.logits(X, flip=True).argmax(1)
+        timing[key] = time.perf_counter() - t0
+    return preds, timing
 
 
 def report(pred, y):
@@ -378,68 +401,121 @@ def report(pred, y):
             "confusion": cm.tolist()}
 
 
-def plot_confusion(cms, path, title):
+def per_class_table(res):
+    keys = list(res["models"])
+    lines = ["| class | " + " | ".join(keys) + " |", "|---|" + "---|" * len(keys)]
+    for c in CLASS_NAMES:
+        lines.append(f"| {c} | " + " | ".join(f"{res['models'][k]['per_class'][c]:.3f}" for k in keys) + " |")
+    lines.append("| **all** | " + " | ".join(f"**{res['models'][k]['acc']:.4f}**" for k in keys) + " |")
+    lines.append("| clean test | " + " | ".join("–" if res['models'][k]['clean_test'] is None else
+                                               f"{res['models'][k]['clean_test']:.4f}" for k in keys) + " |")
+    return "\n".join(lines)
+
+
+def _plt():
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    fig, axes = plt.subplots(1, len(cms), figsize=(6.5 * len(cms), 5.5))
-    for ax, (name, cm) in zip(np.atleast_1d(axes), cms.items()):
+    return plt
+
+
+def plot_confusion(cms, path, title):
+    plt = _plt()
+    n = len(cms)
+    cols = min(n, 4)
+    rows = -(-n // cols)
+    fig, axes = plt.subplots(rows, cols, figsize=(5.2 * cols, 4.8 * rows), squeeze=False)
+    for ax in axes.flat[n:]:
+        ax.axis("off")
+    for ax, (name, cm) in zip(axes.flat, cms.items()):
         cm = np.array(cm)
         norm = cm / np.maximum(1, cm.sum(1, keepdims=True))
         ax.imshow(norm, cmap="Blues", vmin=0, vmax=1)
         for i in range(10):
             for j in range(10):
-                ax.text(j, i, cm[i, j], ha="center", va="center", fontsize=7,
+                ax.text(j, i, cm[i, j], ha="center", va="center", fontsize=6,
                         color="white" if norm[i, j] > 0.5 else "black")
-        ax.set_xticks(range(10), CLASS_NAMES, rotation=45, ha="right", fontsize=8)
-        ax.set_yticks(range(10), CLASS_NAMES, fontsize=8)
+        ax.set_xticks(range(10), CLASS_NAMES, rotation=45, ha="right", fontsize=7)
+        ax.set_yticks(range(10), CLASS_NAMES, fontsize=7)
         ax.set_xlabel("predicted")
         ax.set_ylabel("true")
-        ax.set_title(name)
+        ax.set_title(f"{name} (TTA)")
     fig.suptitle(title)
+    fig.tight_layout()
+    fig.savefig(path, dpi=90)
+    plt.close(fig)
+
+
+def plot_vs_test(res, path, name):
+    """Grouped bars: clean test accuracy vs hidden-set accuracy for every model (both with flip TTA)."""
+    plt = _plt()
+    keys = list(res["models"])
+    clean = [np.nan if res["models"][k]["clean_test"] is None else res["models"][k]["clean_test"] for k in keys]
+    hid = [res["models"][k]["acc"] for k in keys]
+    x = np.arange(len(keys))
+    fig, ax = plt.subplots(figsize=(1.1 * len(keys) + 2, 4))
+    ax.bar(x - 0.2, clean, 0.4, label="clean test (once)", color="#2a78d6")
+    ax.bar(x + 0.2, hid, 0.4, label=f"hidden: {name}", color="#eb6834")
+    for i in range(len(keys)):
+        ax.text(x[i] - 0.2, clean[i] + 0.005, f"{clean[i]:.3f}", ha="center", fontsize=7)
+        ax.text(x[i] + 0.2, hid[i] + 0.005, f"{hid[i]:.3f}", ha="center", fontsize=7)
+    ax.set_xticks(x, keys)
+    lo = np.nanmin(clean + hid)
+    ax.set_ylim(lo - 0.08 if lo > 0.1 else 0, 1.0)
+    ax.set_ylabel("accuracy (flip TTA)")
+    ax.legend(frameon=False, loc="lower left")
+    ax.set_title(f"Clean test vs hidden set ({res['n']} images)")
+    ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
     fig.savefig(path, dpi=100)
     plt.close(fig)
 
 
-def evaluate_path(path, name, labels=None, invert="auto", write=True):
+def evaluate_path(path, name, labels=None, invert="auto", write=True, loaded=None):
     LOG.clear()
-    cfg, model, qm = load_final()
+    cfg, models = loaded or load_models()
     fmt, X01, y = load_any(path, labels, invert)
-    pf, pq, timing = run_models(X01, cfg, model, qm)
-    res = {"path": path, "format": fmt, "n": int(len(X01)), "model": cfg["selected"],
-           "checkpoint": cfg["checkpoint"], "int8": cfg["int8"], "tta": "flip",
-           "standardize": {"mean": cfg["mean"], "std": cfg["std"]}, "log": list(LOG), "timing": timing,
-           "agree_float_int8": float((pf == pq).mean()),
-           "pred_counts_float": np.bincount(pf, minlength=10).tolist(),
-           "pred_counts_int8": np.bincount(pq, minlength=10).tolist()}
+    preds, timing = run_models(X01, cfg, models)
+    res = {"path": path, "format": fmt, "n": int(len(X01)), "tta": "flip",
+           "models_declared": [k for k, *_ in models],
+           "sources": {"teachers float": "runs/cnn_index.json best.npz", "teachers int8": "runs/cnn_{e2,b,d}_int8.npz",
+                       "students int8": "runs/student_S{0,1}_int8.ace8", "clean_test": "runs/test_once.json, runs/final_model.json"},
+           "standardize": {"mean": cfg["mean"], "std": cfg["std"]}, "log": list(LOG), "timing_s": timing,
+           "pred_counts": {k: np.bincount(p, minlength=10).tolist() for k, p in preds.items()},
+           "agree_float_int8": {r: float((preds[r] == preds[f"{r} int8"]).mean()) for r in TEACHERS}}
     if y is not None:
         if len(y) != len(X01):
             raise ValueError(f"{len(X01)} images but {len(y)} labels")
-        res["float"], res["int8_eval"] = report(pf, y), report(pq, y)
-        print(f"[{name}] n={len(y)} float+TTA {res['float']['acc']:.4f} int8+TTA {res['int8_eval']['acc']:.4f}")
+        res["models"] = {k: {**report(preds[k], y), "clean_test": t, "kind": kind} for k, kind, _, t in models}
+        res["per_class_table_md"] = per_class_table(res)
+        print(f"[{name}] n={len(y)} " + ", ".join(f"{k} {v['acc']:.4f}" for k, v in res["models"].items()))
     else:
-        print(f"[{name}] n={len(X01)} unlabeled; float/int8 agreement {res['agree_float_int8']:.4f}")
+        print(f"[{name}] n={len(X01)} unlabeled; float/int8 agreement {res['agree_float_int8']}")
     if write:
         stem = os.path.join(RUNS_DIR, f"hidden_eval_{name}")
         with open(stem + ".json", "w") as f:
             json.dump(res, f, indent=2)
+        keys = list(preds)
         with open(stem + "_predictions.csv", "w", newline="") as f:
             w = csv.writer(f)
-            w.writerow(["index", "pred_float_tta", "pred_int8_tta"] + (["label"] if y is not None else []))
-            for i in range(len(pf)):
-                w.writerow([i, int(pf[i]), int(pq[i])] + ([int(y[i])] if y is not None else []))
+            w.writerow(["index"] + [f"pred_{k.replace(' ', '_')}" for k in keys] + (["label"] if y is not None else []))
+            for i in range(len(X01)):
+                w.writerow([i] + [int(preds[k][i]) for k in keys] + ([int(y[i])] if y is not None else []))
         if y is not None:
-            plot_confusion({"float + TTA": res["float"]["confusion"], "int8 + TTA": res["int8_eval"]["confusion"]},
-                           stem + "_confusion.png", f"{name}: model {cfg['selected']}")
-    return res, pf, pq
+            with open(stem + "_per_class.md", "w") as f:
+                f.write(f"# Hidden set `{name}`: per-class accuracy (flip TTA)\n\n{res['per_class_table_md']}\n")
+            plot_confusion({k: v["confusion"] for k, v in res["models"].items()}, stem + "_confusion.png", name)
+            plot_vs_test(res, stem + "_vs_test.png", name)
+    return res, preds
 
 
 # ---------------------------------------------------------------- self-test
 
 def selftest():
-    """Save shifted val (uint8-quantized) as .npz, idx .gz and a PNG folder; check all three give the
-    same predictions as evaluating the array directly. Plus a 56x56 RGB PNG variant (resize path)."""
+    """Save shifted val (uint8-quantized) as .npz, idx .gz and a PNG folder. Each loader must return
+    exactly the reference images and labels (so every model's predictions are identical); npz and PNG are
+    also run end to end through all models and checked prediction for prediction. Plus a 56x56 RGB PNG
+    variant (resize path), evaluated on all models."""
     from acenet.shift import SHIFTED_VAL_PATH
     d = np.load(SHIFTED_VAL_PATH)
     X8 = np.round(d["X"] * 255).astype(np.uint8)
@@ -455,45 +531,48 @@ def selftest():
         os.makedirs(os.path.join(dirs["png"], str(c)), exist_ok=True)
     for i in range(len(X8)):
         png_write(os.path.join(dirs["png"], str(y[i]), f"{i:05d}.png"), X8[i])
-    n_rgb = 500
+    n_rgb = min(500, len(X8))
     big = np.repeat(np.repeat(X8[:n_rgb], 2, axis=1), 2, axis=2)  # 56x56 nearest upsample
     for i in range(n_rgb):
         png_write(os.path.join(dirs["png_rgb56"], f"{i:05d}_{y[i]}.png"), np.stack([big[i]] * 3, axis=2))
     t_write = time.perf_counter() - t0
 
-    cfg, model, qm = load_final()
-    ref_f, ref_q, _ = run_models(X8.astype(np.float32) / 255, cfg, model, qm)
+    loaded = load_models()
+    cfg = loaded[0]
+    X_ref = X8.astype(np.float32) / 255
+    ref, _ = run_models(X_ref, cfg, loaded[1])
     out = {"source": "data/shifted_val.npz quantized to uint8", "n": int(len(y)), "write_s": t_write,
-           "reference": {"float_tta_acc": float((ref_f == y).mean()), "int8_tta_acc": float((ref_q == y).mean())},
-           "formats": {}}
-    order = None
+           "models": list(ref), "reference_acc": {k: float((p == y).mean()) for k, p in ref.items()}, "formats": {}}
     for fmt in ("npz", "idx", "png"):
         t0 = time.perf_counter()
-        res, pf, pq = evaluate_path(dirs[fmt], f"selftest_{fmt}", write=(fmt == "png"))
-        # PNG files are read in path order (class folder, then index); map back to the original order
-        if fmt == "png":
+        LOG.clear()
+        _, X01, yl = load_any(dirs[fmt])
+        order = np.arange(len(y))
+        if fmt == "png":  # PNGs are read in path order (class folder, then index): map back to the original order
             files = sorted(glob.glob(os.path.join(dirs["png"], "**", "*.png"), recursive=True))
             order = np.array([int(os.path.basename(f)[:5]) for f in files])
-            pf_o, pq_o = np.empty_like(pf), np.empty_like(pq)
-            pf_o[order], pq_o[order] = pf, pq
-            pf, pq = pf_o, pq_o
-        out["formats"][fmt] = {"detected": res["format"], "float_tta_acc": res["float"]["acc"],
-                               "int8_tta_acc": res["int8_eval"]["acc"],
-                               "identical_to_reference_float": bool(np.array_equal(pf, ref_f)),
-                               "identical_to_reference_int8": bool(np.array_equal(pq, ref_q)),
-                               "log": res["log"], "s": time.perf_counter() - t0}
-    res, pf, pq = evaluate_path(dirs["png_rgb56"], "selftest_png_rgb56", write=False)
+        r = {"detected": fmt, "images_identical": bool(np.array_equal(X01, X_ref[order])),
+             "labels_identical": bool(np.array_equal(yl, y[order])), "log": list(LOG)}
+        if fmt in ("npz", "png"):
+            res, preds = evaluate_path(dirs[fmt], f"selftest_{fmt}", write=(fmt == "png"), loaded=loaded)
+            inv = np.empty_like(order)
+            inv[order] = np.arange(len(order))
+            r["acc"] = {k: v["acc"] for k, v in res["models"].items()}
+            r["predictions_identical"] = {k: bool(np.array_equal(p[inv], ref[k])) for k, p in preds.items()}
+        r["s"] = time.perf_counter() - t0
+        out["formats"][fmt] = r
+    res, preds = evaluate_path(dirs["png_rgb56"], "selftest_png_rgb56", write=False, loaded=loaded)
     out["formats"]["png_rgb56"] = {"detected": res["format"], "n": res["n"],
-                                   "float_tta_acc": res["float"]["acc"], "int8_tta_acc": res["int8_eval"]["acc"],
-                                   "reference_first_500_float": float((ref_f[:n_rgb] == y[:n_rgb]).mean()),
-                                   "agree_with_reference_float": float((pf == ref_f[:n_rgb]).mean()),
+                                   "acc": {k: v["acc"] for k, v in res["models"].items()},
+                                   "agree_with_reference": {k: float((p == ref[k][:n_rgb]).mean()) for k, p in preds.items()},
                                    "log": res["log"]}
+    ok = all(v["images_identical"] and v["labels_identical"] and all(v.get("predictions_identical", {}).values())
+             for k, v in out["formats"].items() if k != "png_rgb56")
+    out["pass"] = bool(ok)
     with open(os.path.join(RUNS_DIR, "hidden_eval_selftest.json"), "w") as f:
         json.dump(out, f, indent=2)
     print(json.dumps({k: {kk: vv for kk, vv in v.items() if kk != "log"} for k, v in out["formats"].items()},
                      indent=1))
-    ok = all(v["identical_to_reference_float"] and v["identical_to_reference_int8"]
-             for k, v in out["formats"].items() if k != "png_rgb56")
     print("SELFTEST", "PASS" if ok else "FAIL")
     return ok
 

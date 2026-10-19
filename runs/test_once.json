@@ -33,5 +33,16 @@
     "tta": true,
     "file_bytes": 43770,
     "test_acc": 0.9281
+  },
+  "student_S1_float": {
+    "model": "S1",
+    "tta": true,
+    "test_acc": 0.9299
+  },
+  "student_S1_int8": {
+    "model": "S1",
+    "tta": true,
+    "file_bytes": 43770,
+    "test_acc": 0.9287
   }
 }

@@ -250,7 +250,9 @@
         "brightness-add": 0.7567849686847599
       },
       "shifted_val_acc_all": 0.6376666666666667,
-      "shifted_val_acc_all_tta": 0.6461666666666667
+      "shifted_val_acc_all_tta": 0.6461666666666667,
+      "float_test": 0.9299,
+      "int8_test": 0.9287
     },
     "S0": {
       "file": "runs/student_S0_int8.ace8",
@@ -669,5 +671,16 @@
       "criterion": "student int8 test >= E2 float test - 2.0 pt",
       "pass": true
     }
+  },
+  "deliverable": {
+    "id": "S1",
+    "purpose": "required distilled-student deliverable; does not change selection",
+    "selected_student": "S0",
+    "float": 0.9299,
+    "int8": 0.9287,
+    "E2_float": 0.9403,
+    "int8_minus_E2_float_pt": -1.1600000000000055,
+    "criterion": "student int8 test >= E2 float test - 2.0 pt",
+    "pass": true
   }
 }

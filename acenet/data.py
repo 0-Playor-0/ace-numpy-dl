@@ -23,6 +23,10 @@ RAW_DIR = os.path.join(ROOT, "raw")
 IMAGE_MAGIC = 2051
 LABEL_MAGIC = 2049
 EXPECTED_COUNT = {"train": 60000, "test": 10000}
+# Smoke mode (ACE_SMOKE=1, set by `python -m experiments.<script> --smoke`): tiny fixed subsets so every
+# pipeline stage runs end to end in seconds. Never used for reported numbers.
+SMOKE = os.environ.get("ACE_SMOKE") == "1"
+SMOKE_N = {"train": 2048, "val": 512, "test": 512}
 
 
 def _parse_idx(path):
@@ -104,6 +108,9 @@ def load_splits(rng, n_val=6000, flatten=False, raw_dir=RAW_DIR):
     download(raw_dir)
     Xtr_u8, ytr, Xte_u8, yte = load(raw_dir)
     tr_idx, va_idx = split_train_val(Xtr_u8.shape[0], n_val, rng)
+    if SMOKE:
+        tr_idx, va_idx = tr_idx[:SMOKE_N["train"]], va_idx[:SMOKE_N["val"]]
+        Xte_u8, yte = Xte_u8[:SMOKE_N["test"]], yte[:SMOKE_N["test"]]
     X_train01 = to_unit(Xtr_u8[tr_idx])
     mean = float(X_train01.mean(dtype=np.float64))
     std = float(X_train01.std(dtype=np.float64))

@@ -19,8 +19,10 @@ Float size = 4 B × (params + BN buffers). Int8 size = actual file size: npz for
 | D int8 | 0.9358 | 0.9370 | 0.9282 | – | 0.910 | 0.875 | 468,138 | 466.9 |
 | S0 (P, CE) | 0.9320 | 0.9367 | 0.9304 | 0.0212 | 0.630 | 0.235 | 42,570 | 167.5 |
 | **S0 int8 (final student)** | 0.9267 | 0.9337 | **0.9281** | – | 0.628 | 0.242 | 42,570 | **42.7** (43,770 B) |
-| S1 (P, KD T=4 α=0.9) | 0.9322 | 0.9337 | – | 0.0147 | 0.637 | 0.209 | 42,570 | 167.5 |
-| S1 int8 | 0.9280 | 0.9323 | – | – | 0.638 | 0.210 | 42,570 | 42.7 |
+| S1 (P, KD T=4 α=0.9) | 0.9322 | 0.9337 | 0.9299 | 0.0147 | 0.637 | 0.209 | 42,570 | 167.5 |
+| S1 int8 (KD deliverable) | 0.9280 | 0.9323 | 0.9287 | – | 0.638 | 0.210 | 42,570 | 42.7 |
+
+S1 was tested once in Phase 7 as the required distilled-student deliverable (pre-registered in commit ba2ccb9; it does not change the selection). Its int8 test (0.9287) is 0.06 pt above S0 int8 (0.9281), which is 6 images out of 10,000 and well inside test noise (1 s.e. ≈ 0.26 pt); the val ranking (S0 ahead by 0.14 pt int8) decided the selection before either was tested.
 
 S2 (KD T=2) was not trained. The gate was S1 int8 val+TTA < 0.925, and S1 scored 0.9323.
 

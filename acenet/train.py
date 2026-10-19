@@ -109,6 +109,9 @@ def fit(model, opt, train_loader, val_loader, epochs, lr_schedule=None, run_name
     A non-finite training loss aborts the run with status "diverged".
     On return the model holds the best-val-accuracy weights (also saved to best.npz).
     """
+    from .data import SMOKE
+    if SMOKE:  # smoke mode: one epoch per run
+        epochs = 1
     run_dir = os.path.join(runs_dir, f"{run_name}_{time.strftime('%Y%m%d-%H%M%S')}")
     os.makedirs(run_dir)
     config = dict(config or {}, run_name=run_name, seed=seed, epochs=epochs,

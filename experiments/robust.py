@@ -222,6 +222,7 @@ def select():
         winner = "D" if d["shifted_val_acc_all"] > b["shifted_val_acc_all"] else "B"
         why = (f"val+TTA diff D-B = {diff:+.4f} within 0.15 pt; shifted-val B {b['shifted_val_acc_all']:.4f} "
                f"vs D {d['shifted_val_acc_all']:.4f}")
+    from experiments import quant
     previous = json.load(open(FINAL)) if os.path.exists(FINAL) else {}
     data = load_data()
     res = {"rule": SELECTION_RULE, "B": {k: b[k] for k in ("val_acc_tta", "shifted_val_acc_all")},
@@ -230,7 +231,8 @@ def select():
     print(res)
     if winner == "B":
         res.update(checkpoint=os.path.relpath(os.path.join(ROOT, b["run_dir"], "best.npz"), ROOT),
-                   int8="runs/cnn_b_int8.npz", test_float_tta=0.9349, test_int8_tta=0.9344,
+                   int8="runs/cnn_b_int8.npz", test_float_tta=quant.b_float_test(),
+                   test_int8_tta=json.load(open(os.path.join(RUNS_DIR, "cnn_b_int8.json")))["test"]["test_acc"],
                    test_note="B kept: Phase 3b/4 test results stand; test not touched")
         with open(FINAL, "w") as f:
             json.dump(res, f, indent=2)
@@ -251,7 +253,6 @@ def select():
     res["test_float"] = test
     with open(FINAL, "w") as f:  # persist the guard before quantization
         json.dump(res, f, indent=2)
-    from experiments import quant
     q = quant.main("D", float_test=test["test_acc"], calibrators=("p99.99",))
     res["test_int8"] = q["test"]
     res["int8_val_acc_tta"] = q["calibrators"]["p99.99"]["val_acc_tta"]

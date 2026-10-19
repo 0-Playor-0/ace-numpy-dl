@@ -8,6 +8,7 @@ Usage:
   python -m experiments.distill screen     # lr_finder + 10 epochs CE for each candidate; pick by val
   python -m experiments.distill students   # S0 (CE), S1 (KD T=4), S2 (KD T=2), 40 epochs, from cache
   python -m experiments.distill final      # pick S* by val+TTA, quantize, size check, test ONCE
+  python -m experiments.distill deliverable # Phase 7: S1 (KD) tested ONCE as the required distilled student
   python -m experiments.distill ablation   # runs/ablation.json + docs/ablation.md
 
 Test-once guard: every test-set number goes through once(key, fn), which stores it in
@@ -46,6 +47,7 @@ STUDENTS = {"S0": None, "S1": (4.0, 0.9), "S2": (2.0, 0.9)}   # (T, alpha); None
 P_TOLERANCE = 0.003        # pick P if its screen val is within 0.3 pt of the best candidate (speed)
 SLOW_S_PER_EPOCH, SLOW_EPOCHS = 120.0, 30   # selected student > 120 s/epoch -> 30 epochs for all S runs
 CRITERION_PT = 0.02        # final criterion: student int8 test >= E2 float test - 2.0 pt
+DELIVERABLE = "S1"   # Phase 7 (pre-registered in commit ba2ccb9): the KD student, tested once, does not change selection
 S2_GATE = 0.9450 - 0.02    # S2 runs only if S1 int8 val+TTA < E2 float val+TTA (0.9450) - 2.0 pt (val only)
 
 
@@ -486,7 +488,7 @@ def final():
     int8_val_tta = {sid: quantize_student(sid)["val_acc_tta"] for sid in rows}
     sel = max(rows, key=lambda s: (int8_val_tta[s], -int(s[1])))
     store = json.load(open(TEST_ONCE))
-    tested = [k for k in store if k.startswith("student_") and not k.startswith(f"student_{sel}_")]
+    tested = [k for k in store if k.startswith("student_") and not k.startswith((f"student_{sel}_", f"student_{DELIVERABLE}_"))]
     assert not tested, f"another student already touched test: {tested}"
     q = test_student(sel, data)
     store = json.load(open(TEST_ONCE))
@@ -500,6 +502,23 @@ def final():
                                "pass": bool(q["int8_test"] >= e2f - CRITERION_PT)}}
     _save("final", res)
     print("selected", sel, json.dumps(res["test"], indent=2))
+
+
+def deliverable():
+    """Phase 7: test the KD student DELIVERABLE once (float + int8, flip TTA). Reporting only: the final
+    student stays d["final"]["selected"] whatever this scores."""
+    d = _load()
+    sel = d["final"]["selected"]
+    assert DELIVERABLE != sel and DELIVERABLE in d["quant"], (DELIVERABLE, sel)
+    q = test_student(DELIVERABLE, load_data())
+    e2f = json.load(open(TEST_ONCE))["E2_float"]["test_acc"]
+    res = {"id": DELIVERABLE, "purpose": "required distilled-student deliverable; does not change selection",
+           "selected_student": sel, "float": q["float_test"], "int8": q["int8_test"], "E2_float": e2f,
+           "int8_minus_E2_float_pt": 100 * (q["int8_test"] - e2f),
+           "criterion": "student int8 test >= E2 float test - 2.0 pt",
+           "pass": bool(q["int8_test"] >= e2f - CRITERION_PT)}
+    _save("deliverable", res)
+    print(json.dumps(res, indent=2))
 
 
 # ---------------------------------------------------------------- step 7: ablation table
@@ -524,8 +543,9 @@ def ablation():
     sel = d["final"]["selected"]
     quant = d["quant"]
     order = [r for r in ORDER if r in rows]
+    b_test = json.load(open(os.path.join(RUNS_DIR, "cnn_ablation.json")))["test"]  # None if 3b selected A
     test = {"A": (json.load(open(os.path.join(RUNS_DIR, "cnn_test.json")))["test_acc"], False),
-            "B": (json.load(open(os.path.join(RUNS_DIR, "cnn_ablation.json")))["test"]["test_acc"], True),
+            **({"B": (b_test["test_acc"], True)} if b_test and b_test["id"] == "B" else {}),
             "E2": (tests["E2_float"]["test_acc"], True), "D": (tests["D_float"]["test_acc"], True),
             **{sid: (q["float_test"], True) for sid, q in quant.items() if "float_test" in q}}
     table = []
@@ -604,7 +624,7 @@ def main():
     ap = argparse.ArgumentParser()
     stages = {"teachers": teachers, "cache": cache, "candidates": candidates, "speed": speed, "screen": screen,
               "cache_cropflip": cache_cropflip, "select_arch": select_arch, "students": students, "final": final,
-              "ablation": ablation}
+              "deliverable": deliverable, "ablation": ablation}
     ap.add_argument("stage", choices=list(stages))
     stages[ap.parse_args().stage]()
 
