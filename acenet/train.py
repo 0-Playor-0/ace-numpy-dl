@@ -94,8 +94,11 @@ def plot_curves(rows, path, title):
 
 
 def fit(model, opt, train_loader, val_loader, epochs, lr_schedule=None, run_name="run",
-        config=None, seed=None, runs_dir=RUNS_DIR, verbose=True):
+        config=None, seed=None, runs_dir=RUNS_DIR, verbose=True, label_smoothing=0.0):
     """Train with softmax cross-entropy; validate after every epoch.
+
+    label_smoothing applies to the training loss only (the logged train_loss is the smoothed loss);
+    validation always uses plain cross-entropy so runs stay comparable.
 
     lr_schedule: optional callable epoch (1-based) -> lr, applied at the start of each epoch.
     A non-finite training loss aborts the run with status "diverged".
@@ -103,7 +106,8 @@ def fit(model, opt, train_loader, val_loader, epochs, lr_schedule=None, run_name
     """
     run_dir = os.path.join(runs_dir, f"{run_name}_{time.strftime('%Y%m%d-%H%M%S')}")
     os.makedirs(run_dir)
-    config = dict(config or {}, run_name=run_name, seed=seed, epochs=epochs)
+    config = dict(config or {}, run_name=run_name, seed=seed, epochs=epochs,
+                  label_smoothing=label_smoothing)
     with open(os.path.join(run_dir, "config.json"), "w") as f:
         json.dump(config, f, indent=2)
     with open(os.path.join(run_dir, "seed.txt"), "w") as f:
@@ -121,7 +125,7 @@ def fit(model, opt, train_loader, val_loader, epochs, lr_schedule=None, run_name
         with np.errstate(over="ignore", invalid="ignore"):
             for step, (xb, yb) in enumerate(train_loader, 1):
                 logits = model(Tensor(xb))
-                loss = ops.softmax_cross_entropy(logits, yb)
+                loss = ops.softmax_cross_entropy(logits, yb, label_smoothing)
                 lv = float(loss.data)
                 if not math.isfinite(lv):
                     status, diverged_at = "diverged", {"epoch": epoch, "step": step, "loss": lv}

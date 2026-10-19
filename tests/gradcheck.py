@@ -15,11 +15,13 @@ def rel_err(a, n):
     return float(np.linalg.norm(a - n) / np.maximum(np.linalg.norm(a) + np.linalg.norm(n), 1e-12))
 
 
-def gradcheck(fn, inputs, eps=EPS, seed=0):
+def gradcheck(fn, inputs, eps=EPS, seed=12345):
     """Compare autograd gradients of fn against central differences.
 
     fn maps Tensors to a Tensor of any shape. A non-scalar output y is reduced to the
     scalar sum(y * R) with a fixed random R, applied outside autograd via y.backward(R).
+    R's seed must differ from the input seed: with R == x, sum(BN(x) * x) has a near-zero
+    gradient and the relative error is meaningless.
     inputs: list of float arrays (cast to float64). Returns the max rel_err over inputs.
     """
     xs = [np.array(x, dtype=np.float64) for x in inputs]

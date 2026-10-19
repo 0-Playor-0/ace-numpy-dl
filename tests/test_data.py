@@ -91,3 +91,66 @@ def test_brightness_modes():
     X = np.full((2, 28, 28), 0.5, dtype=np.float32)
     out = make_shifted(X, "brightness", [0.2, 0.2], np.random.default_rng(0), mode=[0, 1])
     assert np.allclose(out[0], 0.6) and np.allclose(out[1], 0.7)
+
+
+def test_augment_batch():
+    from acenet.data import augment_batch
+    rng = np.random.default_rng(0)
+    x = rng.random((64, 1, 28, 28)).astype(np.float32)
+    out = augment_batch(x, rng, pad=2, flip_p=0.5, fill=-1.0)
+    assert out.shape == x.shape and out.dtype == np.float32
+    # no-op settings reproduce the input exactly
+    assert np.array_equal(augment_batch(x, rng, pad=0, flip_p=0.0), x)
+    assert np.array_equal(augment_batch(x, rng, pad=0, flip_p=1.0), x[..., ::-1])
+    # every output is a shifted (and maybe flipped) crop of its own padded input
+    xp = np.pad(x, ((0, 0), (0, 0), (2, 2), (2, 2)), constant_values=-1.0)
+    for n in range(8):
+        crops = [xp[n, :, i:i + 28, j:j + 28] for i in range(5) for j in range(5)]
+        assert any(np.array_equal(out[n], c) or np.array_equal(out[n], c[..., ::-1]) for c in crops)
+    flipped = (out[:, :, 2:-2, 2:-2] != x[:, :, 2:-2, 2:-2]).any(axis=(1, 2, 3))
+    assert 0.2 < flipped.mean() <= 1.0
+
+
+def test_dataloader_transform_only_when_given():
+    X = np.zeros((10, 1, 4, 4), dtype=np.float32)
+    y = np.arange(10)
+    dl = DataLoader(X, y, 5, shuffle=True, rng=np.random.default_rng(0), transform=lambda x, r: x + 1)
+    assert all((xb == 1).all() for xb, _ in dl)
+    assert all((xb == 0).all() for xb, _ in DataLoader(X, y, 5, shuffle=False))
+
+
+def test_random_erase():
+    from acenet.data import random_erase
+    rng = np.random.default_rng(0)
+    x = np.full((2000, 1, 28, 28), 5.0, dtype=np.float32)  # 5.0 is far outside typical N(0,1) draws
+    out = random_erase(x, rng)
+    assert out.shape == x.shape and out.dtype == np.float32
+    erased = out != 5.0
+    frac = erased.reshape(len(x), -1).mean(axis=1)
+    hit = frac > 0
+    assert 0.45 < hit.mean() < 0.55
+    assert frac[hit].min() >= 0.02 and frac[hit].max() <= 0.2
+    # each erased region is one axis-aligned rectangle
+    for n in np.flatnonzero(hit)[:50]:
+        rr, cc = np.nonzero(erased[n, 0])
+        box = erased[n, 0, rr.min():rr.max() + 1, cc.min():cc.max() + 1]
+        assert box.all()
+    assert abs(out[erased].mean()) < 0.05 and abs(out[erased].std() - 1) < 0.05
+    assert np.array_equal(random_erase(x, rng, p=0.0), x)
+
+
+def test_train_augment_flag_and_eval_loaders():
+    from acenet.data import train_augment
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((64, 1, 28, 28)).astype(np.float32)
+    a = train_augment(x, np.random.default_rng(1), fill=-0.8, erase=False)
+    b = train_augment(x, np.random.default_rng(1), fill=-0.8, erase=True)
+    assert a.shape == b.shape == x.shape and a.dtype == b.dtype == np.float32
+    assert not np.array_equal(a, b)
+    # erase=False is exactly crop/flip
+    from acenet.data import augment_batch
+    assert np.array_equal(a, augment_batch(x, np.random.default_rng(1), pad=2, flip_p=0.5, fill=-0.8))
+    # eval loaders (no transform) return the stored arrays untouched, for every batch
+    y = np.zeros(64, dtype=np.int64)
+    dl = DataLoader(x, y, 16, shuffle=False)
+    assert np.array_equal(np.concatenate([xb for xb, _ in dl]), x)

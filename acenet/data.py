@@ -121,10 +121,64 @@ def load_splits(rng, n_val=6000, flatten=False, raw_dir=RAW_DIR):
     }
 
 
-class DataLoader:
-    """Iterable over (x, y) minibatches. A fresh permutation is drawn from rng each epoch when shuffling."""
+def augment_batch(x, rng, pad=2, flip_p=0.5, fill=0.0):
+    """Random crop with padding + random horizontal flip for a (N, C, H, W) batch, vectorized.
 
-    def __init__(self, X, y, batch_size, shuffle, rng=None, drop_last=False):
+    Each image is padded by `pad` pixels of value `fill`, a random H x W window is cut out, and the
+    result is mirrored left-right with probability flip_p. For standardized inputs, pass the
+    standardized value of a black pixel as fill so the padding matches the background.
+    """
+    N, C, H, W = x.shape
+    xp = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), constant_values=fill)
+    win = np.lib.stride_tricks.sliding_window_view(xp, (H, W), axis=(2, 3))  # (N, C, 2p+1, 2p+1, H, W)
+    dy = rng.integers(0, 2 * pad + 1, N)
+    dx = rng.integers(0, 2 * pad + 1, N)
+    out = win[np.arange(N), :, dy, dx]  # (N, C, H, W)
+    flip = rng.random(N) < flip_p
+    return np.where(flip[:, None, None, None], out[..., ::-1], out)
+
+
+def random_erase(x, rng, p=0.5, area=(0.02, 0.2), aspect=(0.3, 3.3), attempts=10):
+    """Random erasing (Zhong et al. 2017) for a (N, C, H, W) batch, vectorized.
+
+    With probability p per image, a rectangle covering area[0]-area[1] of the image with
+    aspect ratio h/w drawn log-uniformly from `aspect` is replaced by N(0, 1) noise (standardized
+    space). Each image gets `attempts` candidate boxes and uses the first that fits; if none fits,
+    it is left unchanged.
+    """
+    N, C, H, W = x.shape
+    target = rng.uniform(*area, (N, attempts)) * H * W
+    ratio = np.exp(rng.uniform(np.log(aspect[0]), np.log(aspect[1]), (N, attempts)))
+    h = np.round(np.sqrt(target * ratio)).astype(np.int64)
+    w = np.round(np.sqrt(target / ratio)).astype(np.int64)
+    hw = h * w  # after rounding; reject boxes that drift outside the area range
+    fits = ((h >= 1) & (w >= 1) & (h <= H) & (w <= W)
+            & (hw >= area[0] * H * W) & (hw <= area[1] * H * W))
+    first = fits.argmax(axis=1)
+    rows = np.arange(N)
+    h, w = h[rows, first], w[rows, first]
+    apply = (rng.random(N) < p) & fits[rows, first]
+    top = (rng.random(N) * (H - h + 1)).astype(np.int64)
+    left = (rng.random(N) * (W - w + 1)).astype(np.int64)
+    r = np.arange(H)[None, :, None]
+    c = np.arange(W)[None, None, :]
+    box = ((r >= top[:, None, None]) & (r < (top + h)[:, None, None])
+           & (c >= left[:, None, None]) & (c < (left + w)[:, None, None]) & apply[:, None, None])
+    noise = rng.standard_normal(x.shape, dtype=np.float32).astype(x.dtype, copy=False)
+    return np.where(box[:, None], noise, x)
+
+
+def train_augment(x, rng, fill, erase=False):
+    """Train-time augmentation: random crop (pad 2) + horizontal flip, then optional random erasing."""
+    x = augment_batch(x, rng, pad=2, flip_p=0.5, fill=fill)
+    return random_erase(x, rng) if erase else x
+
+
+class DataLoader:
+    """Iterable over (x, y) minibatches. A fresh permutation is drawn from rng each epoch when shuffling.
+    transform(x, rng), if given, is applied to each batch (use for train-time augmentation only)."""
+
+    def __init__(self, X, y, batch_size, shuffle, rng=None, drop_last=False, transform=None):
         if shuffle and rng is None:
             raise ValueError("shuffle=True needs an explicit np.random.Generator")
         if X.shape[0] != y.shape[0]:
@@ -134,6 +188,9 @@ class DataLoader:
         self.shuffle = shuffle
         self.rng = rng
         self.drop_last = drop_last
+        self.transform = transform
+        if transform is not None and rng is None:
+            raise ValueError("transform needs an explicit np.random.Generator")
 
     def __len__(self):
         n = self.X.shape[0]
@@ -144,4 +201,5 @@ class DataLoader:
         order = self.rng.permutation(n) if self.shuffle else np.arange(n)
         for b in range(len(self)):
             idx = order[b * self.batch_size:(b + 1) * self.batch_size]
-            yield self.X[idx], self.y[idx]
+            xb = self.X[idx]
+            yield (xb if self.transform is None else self.transform(xb, self.rng)), self.y[idx]

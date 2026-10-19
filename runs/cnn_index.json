@@ -1,0 +1,45 @@
+[
+  {
+    "run_name": "cnn_const",
+    "status": "ok",
+    "epochs_run": 20,
+    "best_epoch": 20,
+    "best_val_acc": 0.9361666666666667,
+    "best_val_loss": 0.16687751635909082,
+    "wall_time_s": 2833.0887178329867,
+    "run_dir": "runs/cnn_const_20261019-114445",
+    "tag": "const",
+    "epochs": 20,
+    "lr_schedule": "constant"
+  },
+  {
+    "run_name": "cnn_erase",
+    "status": "ok",
+    "epochs_run": 20,
+    "best_epoch": 19,
+    "best_val_acc": 0.9376666666666666,
+    "best_val_loss": 0.1646872267127037,
+    "wall_time_s": 3042.467385291995,
+    "run_dir": "runs/cnn_erase_20261019-123428",
+    "tag": "erase",
+    "epochs": 20,
+    "lr_schedule": "constant",
+    "erase": true,
+    "label_smoothing": 0.0
+  },
+  {
+    "run_name": "cnn_erase_ls",
+    "status": "ok",
+    "epochs_run": 20,
+    "best_epoch": 20,
+    "best_val_acc": 0.936,
+    "best_val_loss": 0.2473019336660703,
+    "wall_time_s": 2511.1119334580144,
+    "run_dir": "runs/cnn_erase_ls_20261019-132511",
+    "tag": "erase_ls",
+    "epochs": 20,
+    "lr_schedule": "constant",
+    "erase": true,
+    "label_smoothing": 0.1
+  }
+]

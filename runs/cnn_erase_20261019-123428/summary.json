@@ -1,0 +1,11 @@
+{
+  "run_name": "cnn_erase",
+  "run_dir": "runs/cnn_erase_20261019-123428",
+  "status": "ok",
+  "diverged_at": null,
+  "epochs_run": 20,
+  "best_epoch": 19,
+  "best_val_acc": 0.9376666666666666,
+  "best_val_loss": 0.1646872267127037,
+  "wall_time_s": 3042.467385291995
+}

@@ -171,26 +171,152 @@ def log_softmax(a, axis=-1):
                  lambda g: (g - np.exp(out) * g.sum(axis=axis, keepdims=True),))
 
 
-def softmax_cross_entropy(logits, labels):
-    """Mean cross-entropy of (N, C) logits against integer labels (N,), fused.
+def softmax_cross_entropy(logits, labels, label_smoothing=0.0):
+    """Mean cross-entropy of (N, K) logits against integer labels (N,), fused.
 
-    Forward uses log-sum-exp; backward is (softmax - onehot) / N.
+    Target = (1 - eps) * onehot + eps / K (eps = label_smoothing). Forward uses log-sum-exp;
+    backward is (softmax - target) / N.
     """
     y = labels.data if isinstance(labels, Tensor) else np.asarray(labels)
     if logits.ndim != 2 or y.shape != (logits.shape[0],):
         raise ValueError(f"expected (N, C) logits and (N,) labels, got {logits.shape}, {y.shape}")
     if not np.issubdtype(y.dtype, np.integer):
         raise TypeError("labels must be integers")
-    N = logits.shape[0]
+    if not 0.0 <= label_smoothing < 1.0:
+        raise ValueError("label_smoothing must be in [0, 1)")
+    N, K = logits.shape
+    eps = float(label_smoothing)
     rows = np.arange(N)
     shifted = logits.data - logits.data.max(axis=1, keepdims=True)
     lse = np.log(np.exp(shifted).sum(axis=1, keepdims=True))
     logp = shifted - lse
     loss = -logp[rows, y].mean()
+    if eps:
+        loss = (1 - eps) * loss - eps / K * logp.sum(axis=1).mean()
 
     def backward(g):
         d = np.exp(logp)
-        d[rows, y] -= 1
+        if eps:
+            d -= eps / K
+            d[rows, y] -= 1 - eps
+        else:
+            d[rows, y] -= 1
         return (g * d / np.asarray(N, logits.dtype),)
 
     return _make(np.asarray(loss, dtype=logits.dtype), (logits,), backward)
+
+
+# Convolution / pooling / normalization -------------------------------------------
+
+def _pair_int(v):
+    return (v, v) if isinstance(v, int) else tuple(v)
+
+
+def conv2d(x, W, b=None, stride=1, padding=0):
+    """2D cross-correlation. x (N, C, H, W), W (F, C, kh, kw), b (F,) -> (N, F, Ho, Wo).
+
+    im2col through sliding_window_view, then one batched matmul. Backward: dW/db by matmul,
+    dx by col2im with one strided slice-add per kernel offset (kh * kw adds, no per-pixel loops).
+    Columns are ordered (kh, kw, C) so each offset's gradient block is contiguous in col2im.
+    """
+    sh, sw = _pair_int(stride)
+    ph, pw = _pair_int(padding)
+    N, C, H, Wd = x.shape
+    F, Cw, kh, kw = W.shape
+    if C != Cw:
+        raise ValueError(f"conv2d: input has {C} channels, weight expects {Cw}")
+    xp = np.pad(x.data, ((0, 0), (0, 0), (ph, ph), (pw, pw))) if ph or pw else x.data
+    Hp, Wp = xp.shape[2:]
+    Ho, Wo = (Hp - kh) // sh + 1, (Wp - kw) // sw + 1
+    win = np.lib.stride_tricks.sliding_window_view(xp, (kh, kw), axis=(2, 3))[:, :, ::sh, ::sw]
+    # (N, C, Ho, Wo, kh, kw) -> cols (N, kh*kw*C, Ho*Wo)
+    cols = np.ascontiguousarray(win.transpose(0, 4, 5, 1, 2, 3)).reshape(N, kh * kw * C, Ho * Wo)
+    Wm = W.data.transpose(0, 2, 3, 1).reshape(F, -1)
+    out = np.matmul(Wm, cols).reshape(N, F, Ho, Wo)
+    if b is not None:
+        out += b.data.reshape(1, F, 1, 1)
+    parents = (x, W) if b is None else (x, W, b)
+
+    def backward(g):
+        g3 = g.reshape(N, F, Ho * Wo)
+        dW = np.matmul(g3, cols.transpose(0, 2, 1)).sum(axis=0)
+        dW = dW.reshape(F, kh, kw, C).transpose(0, 3, 1, 2)
+        dx = None
+        if x.requires_grad:
+            dcols = np.matmul(np.ascontiguousarray(Wm.T), g3).reshape(N, kh, kw, C, Ho, Wo)
+            dxp = np.zeros_like(xp)
+            for i in range(kh):
+                for j in range(kw):
+                    dxp[:, :, i:i + sh * Ho:sh, j:j + sw * Wo:sw] += dcols[:, i, j]
+            dx = dxp[:, :, ph:ph + H, pw:pw + Wd]
+        if b is None:
+            return dx, dW
+        return dx, dW, g.sum(axis=(0, 2, 3))
+
+    return _make(out, parents, backward)
+
+
+def maxpool2d(x, k=2, stride=None):
+    """Max pooling over k x k windows (NCHW). The gradient goes to the first argmax in each window
+    (row-major order within the window). Loops only over the k*k window offsets."""
+    kh, kw = _pair_int(k)
+    sh, sw = _pair_int(stride if stride is not None else k)
+    N, C, H, Wd = x.shape
+    Ho, Wo = (H - kh) // sh + 1, (Wd - kw) // sw + 1
+
+    def view(i, j):
+        return x.data[:, :, i:i + sh * (Ho - 1) + 1:sh, j:j + sw * (Wo - 1) + 1:sw]
+
+    out = view(0, 0).copy()
+    idx = np.zeros(out.shape, dtype=np.int8 if kh * kw < 128 else np.int32)
+    for i in range(kh):
+        for j in range(kw):
+            if i == j == 0:
+                continue
+            v = view(i, j)
+            better = v > out  # strict: ties keep the earlier offset
+            np.copyto(out, v, where=better)
+            idx[better] = i * kw + j
+
+    def backward(g):
+        dx = np.zeros_like(x.data)
+        for i in range(kh):
+            for j in range(kw):
+                dx[:, :, i:i + sh * (Ho - 1) + 1:sh, j:j + sw * (Wo - 1) + 1:sw] += g * (idx == i * kw + j)
+        return (dx,)
+
+    return _make(out, (x,), backward)
+
+
+def batchnorm(x, gamma, beta, axes, eps=1e-5, return_stats=False):
+    """Batch normalization with batch statistics over axes, e.g. (0,) for (N, F) or (0, 2, 3) for NCHW.
+
+    gamma/beta have x's shape with the reduced axes removed. Closed-form backward:
+    dx = gamma / sqrt(var + eps) * (g - mean(g) - xhat * mean(g * xhat)).
+    With return_stats, also returns the batch (mean, biased var), each of gamma's shape.
+    """
+    axes = _axes(axes, x.ndim)
+    keep = tuple(1 if i in axes else s for i, s in enumerate(x.shape))
+    m = int(np.prod([x.shape[i] for i in axes]))
+    mu = x.data.mean(axis=axes, keepdims=True)
+    xhat = x.data - mu
+    var = np.mean(xhat * xhat, axis=axes, keepdims=True)
+    inv = 1.0 / np.sqrt(var + eps)
+    xhat *= inv
+    gam = gamma.data.reshape(keep)
+    out = xhat * gam
+    out += beta.data.reshape(keep)
+
+    def backward(g):
+        dbeta = g.sum(axis=axes, keepdims=True)
+        dgamma = (g * xhat).sum(axis=axes, keepdims=True)
+        dx = xhat * (dgamma / m)
+        np.subtract(g, dx, out=dx)
+        dx -= dbeta / m
+        dx *= gam * inv
+        return dx, dgamma.reshape(gamma.shape), dbeta.reshape(beta.shape)
+
+    res = _make(out, (x, gamma, beta), backward)
+    if return_stats:
+        return res, mu.reshape(gamma.shape), var.reshape(gamma.shape)
+    return res
