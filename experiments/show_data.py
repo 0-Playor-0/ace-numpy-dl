@@ -12,7 +12,14 @@ from acenet.shift import KINDS, SHIFTED_VAL_PATH, build_shifted_val
 
 SEED = 0
 OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "figures")
-SHORT = {"rotate": "rot", "noise": "noise", "brightness": "bright"}
+
+
+def caption(kind, sev, mode):
+    if KINDS[kind] == "rotate":
+        return f"rot {sev:+.1f}°"
+    if KINDS[kind] == "noise":
+        return f"noise σ={sev:.2f}"
+    return f"bright ×{1 + sev:.2f}" if mode == 0 else f"bright {sev:+.2f}"
 
 
 def grid(X, y, rng, title, path, captions=None):
@@ -39,13 +46,11 @@ def main():
     splits = load_splits(rng)
     X_val01 = to_unit(load()[0][splits["val_idx"]])
     y_val = splits["y_val"]
-    X_sh, kind, sev = build_shifted_val(X_val01, y_val, rng)
+    X_sh, kind, sev, mode = build_shifted_val(X_val01, y_val, rng)
     print(f"wrote {SHIFTED_VAL_PATH}: {X_sh.shape}, kinds {np.bincount(kind, minlength=3)}")
 
     os.makedirs(OUT_DIR, exist_ok=True)
-    unit = {"rotate": "°", "noise": "", "brightness": ""}
-    captions = [f"{SHORT[KINDS[k]]} {s:+.2f}{unit[KINDS[k]]}" if KINDS[k] != "noise"
-                else f"noise σ={s:.2f}" for k, s in zip(kind, sev)]
+    captions = [caption(k, s, m) for k, s, m in zip(kind, sev, mode)]
     grid(X_val01, y_val, rng, "Fashion-MNIST val (clean)", os.path.join(OUT_DIR, "val_clean.png"))
     grid(X_sh, y_val, rng, "Fashion-MNIST val (shifted, mixed kinds)",
          os.path.join(OUT_DIR, "val_shifted.png"), captions)

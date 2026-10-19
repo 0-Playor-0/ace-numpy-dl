@@ -85,3 +85,9 @@ def test_shifts_stay_in_unit_range():
         out = make_shifted(X, kind, sev, rng)
         assert out.shape == X.shape and out.dtype == np.float32
         assert out.min() >= 0 and out.max() <= 1
+
+
+def test_brightness_modes():
+    X = np.full((2, 28, 28), 0.5, dtype=np.float32)
+    out = make_shifted(X, "brightness", [0.2, 0.2], np.random.default_rng(0), mode=[0, 1])
+    assert np.allclose(out[0], 0.6) and np.allclose(out[1], 0.7)
