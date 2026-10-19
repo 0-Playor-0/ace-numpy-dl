@@ -1,0 +1,15 @@
+{
+  "run_name": "mlp_diverge_sgd_lr1",
+  "run_dir": "runs/mlp_diverge_sgd_lr1_20261019-112203",
+  "status": "diverged",
+  "diverged_at": {
+    "epoch": 1,
+    "step": 10,
+    "loss": NaN
+  },
+  "epochs_run": 1,
+  "best_epoch": null,
+  "best_val_acc": null,
+  "best_val_loss": null,
+  "wall_time_s": 0.008184542006347328
+}

@@ -1,0 +1,38 @@
+{
+  "sgd": {
+    "run_name": "mlp_sweep_sgd_lr0.01",
+    "run_dir": "runs/mlp_sweep_sgd_lr0.01_20261019-111934",
+    "status": "ok",
+    "epochs_run": 40,
+    "best_epoch": 35,
+    "best_val_acc": 0.8985,
+    "best_val_loss": 0.3808298309644063,
+    "wall_time_s": 15.007648375001736,
+    "optimizer": "sgd",
+    "lr": 0.01,
+    "dropout": 0.0,
+    "weight_decay": 0.0,
+    "tag": "sweep",
+    "epochs": 40,
+    "test_loss": 0.44680612683296206,
+    "test_acc": 0.888
+  },
+  "adam": {
+    "run_name": "mlp_sweep_adam_lr0.0003",
+    "run_dir": "runs/mlp_sweep_adam_lr0.0003_20261019-112018",
+    "status": "ok",
+    "epochs_run": 40,
+    "best_epoch": 20,
+    "best_val_acc": 0.8983333333333333,
+    "best_val_loss": 0.30898838738600415,
+    "wall_time_s": 21.22369987500133,
+    "optimizer": "adam",
+    "lr": 0.0003,
+    "dropout": 0.0,
+    "weight_decay": 0.0,
+    "tag": "sweep",
+    "epochs": 40,
+    "test_loss": 0.3515219151973724,
+    "test_acc": 0.8916
+  }
+}

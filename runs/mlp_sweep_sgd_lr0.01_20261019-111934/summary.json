@@ -1,0 +1,11 @@
+{
+  "run_name": "mlp_sweep_sgd_lr0.01",
+  "run_dir": "runs/mlp_sweep_sgd_lr0.01_20261019-111934",
+  "status": "ok",
+  "diverged_at": null,
+  "epochs_run": 40,
+  "best_epoch": 35,
+  "best_val_acc": 0.8985,
+  "best_val_loss": 0.3808298309644063,
+  "wall_time_s": 15.007648375001736
+}

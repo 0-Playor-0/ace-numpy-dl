@@ -1,0 +1,2 @@
+epoch,lr,train_loss,train_acc,val_loss,val_acc,dead_relu,dead_relu_layers,grad_norm_mean,grad_norm_max,epoch_time,status
+1,1.0,nan,nan,nan,nan,nan,,2.34948682620593e+24,2.114535476833059e+25,0.008178208023309708,diverged

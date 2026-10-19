@@ -7,3 +7,4 @@ data/raw/
 CLAUDE.md
 .claude/
 data/shifted_val.npz
+runs/**/*.npz

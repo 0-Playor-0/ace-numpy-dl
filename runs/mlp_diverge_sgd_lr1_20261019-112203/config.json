@@ -1,0 +1,17 @@
+{
+  "model": "mlp-784-256-128-10",
+  "optimizer": "sgd",
+  "lr": 1.0,
+  "momentum": 0.9,
+  "adam_betas": null,
+  "weight_decay": 0.0,
+  "weight_decay_kind": null,
+  "dropout": 0.0,
+  "batch_size": 128,
+  "data_seed": 0,
+  "tag": "diverge",
+  "lr_schedule": null,
+  "run_name": "mlp_diverge_sgd_lr1",
+  "seed": 1,
+  "epochs": 40
+}

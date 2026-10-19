@@ -1,0 +1,64 @@
+{
+  "overfit": {
+    "original_run": "runs/mlp_overfit_adam_lr0.0003_20261019-112130",
+    "rerun": "runs/mlp_diag-overfit_adam_lr0.0003_20261019-112439",
+    "metrics_reproduced_exactly": true,
+    "best": {
+      "epoch": 20,
+      "val_acc": 0.8983333333333333,
+      "val_loss": 0.3089884017768577,
+      "n_wrong": 610,
+      "loss_share_from_wrong": 0.8328823506852291,
+      "mean_nll_correct": 0.057481352917042414,
+      "mean_nll_wrong": 2.5313211777676847,
+      "mean_conf_wrong": 0.7302696071245611,
+      "frac_wrong_conf_gt_0.99": 0.047540983606557376,
+      "mean_logit_range": 23.22333482992649,
+      "weight_l2_norm": 33.2815369322739
+    },
+    "last": {
+      "epoch": 60,
+      "val_acc": 0.8898333333333334,
+      "val_loss": 0.5826343629893743,
+      "n_wrong": 661,
+      "loss_share_from_wrong": 0.9695272480326884,
+      "mean_nll_correct": 0.019952581866650426,
+      "mean_nll_wrong": 5.127502788729499,
+      "mean_conf_wrong": 0.8584092638624646,
+      "frac_wrong_conf_gt_0.99": 0.29954614220877457,
+      "mean_logit_range": 43.263611990926165,
+      "weight_l2_norm": 41.48122953486439
+    }
+  },
+  "fix": {
+    "original_run": "runs/mlp_fix_adam_lr0.0003_do0.3_wd0.05_20261019-112223",
+    "rerun": "runs/mlp_diag-fix_adam_lr0.0003_do0.3_wd0.05_20261019-112511",
+    "metrics_reproduced_exactly": true,
+    "best": {
+      "epoch": 57,
+      "val_acc": 0.904,
+      "val_loss": 0.28322813675826247,
+      "n_wrong": 576,
+      "loss_share_from_wrong": 0.8218088378166347,
+      "mean_nll_correct": 0.055828264216796354,
+      "mean_nll_wrong": 2.424576936523735,
+      "mean_conf_wrong": 0.7125818037806054,
+      "frac_wrong_conf_gt_0.99": 0.052083333333333336,
+      "mean_logit_range": 25.83373420201863,
+      "weight_l2_norm": 31.263453475168486
+    },
+    "last": {
+      "epoch": 60,
+      "val_acc": 0.9011666666666667,
+      "val_loss": 0.2913032731749572,
+      "n_wrong": 593,
+      "loss_share_from_wrong": 0.8406766149954341,
+      "mean_nll_correct": 0.05150148719638688,
+      "mean_nll_wrong": 2.4778264718024947,
+      "mean_conf_wrong": 0.7229780653754865,
+      "frac_wrong_conf_gt_0.99": 0.05902192242833052,
+      "mean_logit_range": 27.0544311895296,
+      "weight_l2_norm": 31.39246665887925
+    }
+  }
+}

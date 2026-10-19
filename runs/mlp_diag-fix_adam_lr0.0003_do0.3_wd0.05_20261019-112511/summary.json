@@ -1,0 +1,11 @@
+{
+  "run_name": "mlp_diag-fix_adam_lr0.0003_do0.3_wd0.05",
+  "run_dir": "runs/mlp_diag-fix_adam_lr0.0003_do0.3_wd0.05_20261019-112511",
+  "status": "ok",
+  "diverged_at": null,
+  "epochs_run": 60,
+  "best_epoch": 57,
+  "best_val_acc": 0.904,
+  "best_val_loss": 0.28322811673084897,
+  "wall_time_s": 41.946736167010386
+}

@@ -1,0 +1,11 @@
+{
+  "run_name": "mlp_sweep_adam_lr0.001",
+  "run_dir": "runs/mlp_sweep_adam_lr0.001_20261019-112039",
+  "status": "ok",
+  "diverged_at": null,
+  "epochs_run": 40,
+  "best_epoch": 40,
+  "best_val_acc": 0.8981666666666667,
+  "best_val_loss": 0.4825650403896968,
+  "wall_time_s": 20.934171041997615
+}
