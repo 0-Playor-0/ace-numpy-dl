@@ -37,4 +37,10 @@ Final model config (checkpoint, int8 npz, train mean/std): runs/final_model.json
 - E2's schedule gives +0.5 pt clean. D's train acc of 0.887 (augmented) and its best epoch of 20 suggest it underfits. An untested candidate is E2's recipe plus shift aug, trained longer.
 - Shirt is still the weakest class (0.80–0.86).
 
+## Phase 6b pre-registration (written 2026-10-19, before any 6b evaluation)
+- (a) Selection rule revised: the final clean model is chosen by val+TTA among ALL val-evaluated runs (A, B, C, E1, E2, D) → **E2** (0.9450).
+  Val-only selection; E2's test set is still untouched. B stays the int8 reference already reported.
+- (b) Hidden-set report will cover exactly **E2, B and D** (float + int8, flip TTA). Declared before the hidden set is released.
+- (c) Distillation teacher = **E2** (single model, no ensemble).
+
 ## Next: distillation (not started). Hidden set: run `python -m experiments.hidden_eval <path> --name hidden` and fill docs/robustness.md §5.
